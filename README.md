@@ -87,7 +87,7 @@ This library is compatible with Arduino boards and sensors that support the SSCM
 
 ## License
 
-This library is released under the [license name or link].
+This library is released under the [MIT License](./LICENSE).
 
 ## Contributions
 
