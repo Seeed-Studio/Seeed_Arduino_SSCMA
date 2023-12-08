@@ -152,7 +152,7 @@ private:
 
     char tx_buf[256] = {0};            // for cmd
     char rx_buf[2048] = {0};           // for response
-    char payload[512] = {0};          // for json payload
+    char payload[512] = {0};           // for json payload
     uint16_t offset = 0;               // for rx_buf
     StaticJsonDocument<2048> response; // for json response
 

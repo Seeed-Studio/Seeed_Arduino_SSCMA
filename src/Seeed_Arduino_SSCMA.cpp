@@ -205,8 +205,8 @@ void SSCMA::praser_event()
             {
                 JsonArray cls = classes[i];
                 classes_t c;
-                c.target = cls[0];
-                c.score = cls[1];
+                c.target = cls[1];
+                c.score = cls[0];
                 _classes.push_back(c);
             }
         }
