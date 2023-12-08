@@ -62,9 +62,9 @@
 #define CMD_TYPE_EVENT 1
 #define CMD_TYPE_LOG 2
 
-const char CMD_AT_ID[] = "ID";
-const char CMD_AT_NAME[] = "NAME";
-const char CMD_AT_VERSION[] = "VER";
+const char CMD_AT_ID[] = "ID?";
+const char CMD_AT_NAME[] = "NAME?";
+const char CMD_AT_VERSION[] = "VER?";
 const char CMD_AT_STATS[] = "STAT";
 const char CMD_AT_BREAK[] = "BREAK";
 const char CMD_AT_RESET[] = "RST";
@@ -147,11 +147,20 @@ private:
     std::vector<classes_t> _classes;
     std::vector<point_t> _points;
 
+    uint32_t _ID = 0;
+    char _name[32] = {0};
+
+    char tx_buf[256] = {0};            // for cmd
+    char rx_buf[2048] = {0};           // for response
+    char payload[512] = {0};          // for json payload
+    uint16_t offset = 0;               // for rx_buf
+    StaticJsonDocument<2048> response; // for json response
+
 public:
     SSCMA();
     ~SSCMA();
 
-    void begin(TwoWire *wire = &Wire, int address = I2C_ADDRESS,
+    bool begin(TwoWire *wire = &Wire, int address = I2C_ADDRESS,
                uint32_t wait_delay = 2, uint32_t clock = 400000);
     int invoke(int times = 1, bool filter = 0, bool show = 0);
     size_t available();
@@ -164,8 +173,14 @@ public:
     std::vector<classes_t> &classes() { return _classes; }
     std::vector<point_t> &points() { return _points; }
 
+    uint32_t ID(bool cache = true);
+    char *name(bool cache = true);
+
 private:
     void cmd(uint8_t feature, uint8_t cmd, uint16_t len = 0);
+    int wait(int type, const char *cmd, uint32_t timeout = 500);
+    void praser_event();
+    void praser_log();
 };
 
 #endif

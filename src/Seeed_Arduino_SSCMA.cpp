@@ -36,7 +36,7 @@ SSCMA::SSCMA()
 
 SSCMA::~SSCMA() {}
 
-void SSCMA::begin(TwoWire *wire, int address, uint32_t wait_delay,
+bool SSCMA::begin(TwoWire *wire, int address, uint32_t wait_delay,
                   uint32_t clock)
 {
     _wire = wire;
@@ -45,6 +45,14 @@ void SSCMA::begin(TwoWire *wire, int address, uint32_t wait_delay,
     _wire->setClock(clock);
     _wait_delay = wait_delay;
     cmd(FEATURE_TRANSPORT, FEATURE_TRANSPORT_CMD_RESET);
+
+    offset = 0;
+    memset(rx_buf, 0, sizeof(rx_buf));
+    memset(tx_buf, 0, sizeof(tx_buf));
+    memset(payload, 0, sizeof(payload));
+    response.clear();
+
+    return ID(false) && name(false);
 }
 
 void SSCMA::cmd(uint8_t feature, uint8_t cmd, uint16_t len)
@@ -128,6 +136,8 @@ size_t SSCMA::read(char *data, size_t length)
 
 size_t SSCMA::write(const char *data, size_t length)
 {
+    Serial.print("write: ");
+    Serial.write(data, length);
     uint16_t packets = length / MAX_PL_LEN;
     uint16_t remain = length % MAX_PL_LEN;
     for (uint16_t i = 0; i < packets; i++)
@@ -158,102 +168,194 @@ size_t SSCMA::write(const char *data, size_t length)
     return length;
 }
 
-int SSCMA::invoke(int times, bool filter, bool show)
+void SSCMA::praser_event()
 {
-    char buf[1024] = {0};
-    char payload[512] = {0};
-    char offset = 0;
-    StaticJsonDocument<1024> response;
-
-    snprintf(buf, sizeof(buf), CMD_PREFIX "%s=%d,%d,%d" CMD_SUFFIX,
-             CMD_AT_INVOKE, times, filter, !show);
-    write(buf, strlen(buf));
-
-    unsigned long startTime = millis();
-    while (millis() - startTime <= 5000)
+    if (strstr(response["name"], CMD_AT_INVOKE))
     {
-        while (int len = available())
+
+        if (response["data"].containsKey("perf"))
         {
-            read(buf + offset, len);
-            offset += len;
-            while (char *suffix = strstr(buf, RESPONSE_SUFFIX))
+            _perf.prepocess = response["data"]["perf"][0];
+            _perf.inference = response["data"]["perf"][1];
+            _perf.postprocess = response["data"]["perf"][2];
+        }
+        if (response["data"].containsKey("boxes"))
+        {
+            _boxes.clear();
+            JsonArray boxes = response["data"]["boxes"];
+            for (size_t i = 0; i < boxes.size(); i++)
             {
-                size_t length = suffix - buf + 1;
-                memcpy(payload, buf + 1, length - 1);
-                if (deserializeJson(response, payload))
+                JsonArray box = boxes[i];
+                boxes_t b;
+                b.x = box[0];
+                b.y = box[1];
+                b.w = box[2];
+                b.h = box[3];
+                b.score = box[4];
+                b.target = box[5];
+                _boxes.push_back(b);
+            }
+        }
+
+        if (response["data"].containsKey("classes"))
+        {
+            _classes.clear();
+            JsonArray classes = response["data"]["classes"];
+            for (size_t i = 0; i < classes.size(); i++)
+            {
+                JsonArray cls = classes[i];
+                classes_t c;
+                c.target = cls[0];
+                c.score = cls[1];
+                _classes.push_back(c);
+            }
+        }
+
+        if (response["data"].containsKey("points"))
+        {
+            _points.clear();
+            JsonArray points = response["data"]["points"];
+            for (size_t i = 0; i < points.size(); i++)
+            {
+                JsonArray point = points[i];
+                point_t p;
+                p.x = point[0];
+                p.y = point[1];
+                // p.z = point[2];
+                p.score = point[2];
+                p.target = point[3];
+                _points.push_back(p);
+            }
+        }
+    }
+}
+void SSCMA::praser_log()
+{
+}
+
+int SSCMA::wait(int type, const char *cmd, uint32_t timeout)
+{
+    int ret = CMD_OK;
+    unsigned long startTime = millis();
+    while (millis() - startTime <= timeout)
+    {
+
+        if (size_t len = available())
+        {
+            offset += read(rx_buf + offset, len);
+            rx_buf[offset] = '\0';
+        }
+        // seek response suffix
+        while (char *suffix = strnstr(rx_buf, RESPONSE_SUFFIX, offset))
+        {
+            // parse response
+            if (char *prefix = strnstr(rx_buf, RESPONSE_PREFIX, suffix - rx_buf))
+            {
+                // parse json payload
+                size_t len = suffix - prefix;
+                memcpy(payload, prefix + 1, len);
+                payload[len] = '\0';
+                // delete this pyload in rx_buf
+                // Serial.print("payload: ");
+                // Serial.println(payload);
+                memmove(rx_buf, suffix + strlen(RESPONSE_SUFFIX),
+                        offset - len - strlen(RESPONSE_PREFIX));
+                offset -= suffix - rx_buf + strlen(RESPONSE_SUFFIX);
+                rx_buf[offset] = '\0';
+                response.clear();
+                DeserializationError error = deserializeJson(response, payload);
+                if (error)
                 {
-                    return CMD_EUNKNOWN;
+                    // Serial.print(F("deserializeJson() failed: "));
+                    // Serial.println(error.c_str());
+                    continue;
                 }
-                if (response["code"] != CMD_OK)
-                {
-                    return response["code"];
-                }
+
                 if (response["type"] == CMD_TYPE_EVENT)
                 {
-                    if (response["data"].containsKey("perf"))
-                    {
-                        _perf.prepocess = response["data"]["perf"][0];
-                        _perf.inference = response["data"]["perf"][1];
-                        _perf.postprocess = response["data"]["perf"][2];
-                    }
-                    if (response["data"].containsKey("boxes"))
-                    {
-                        _boxes.clear();
-                        JsonArray boxes = response["data"]["boxes"];
-                        for (size_t i = 0; i < boxes.size(); i++)
-                        {
-                            JsonArray box = boxes[i];
-                            boxes_t b;
-                            b.x = box[0];
-                            b.y = box[1];
-                            b.w = box[2];
-                            b.h = box[3];
-                            b.score = box[4];
-                            b.target = box[5];
-                            _boxes.push_back(b);
-                        }
-                    }
-
-                    if (response["data"].containsKey("classes"))
-                    {
-                        _classes.clear();
-                        JsonArray classes = response["data"]["classes"];
-                        for (size_t i = 0; i < classes.size(); i++)
-                        {
-                            JsonArray cls = classes[i];
-                            classes_t c;
-                            c.target = cls[0];
-                            c.score = cls[1];
-                            _classes.push_back(c);
-                        }
-                    }
-
-                    if (response["data"].containsKey("points"))
-                    {
-                        _points.clear();
-                        JsonArray points = response["data"]["points"];
-                        for (size_t i = 0; i < points.size(); i++)
-                        {
-                            JsonArray point = points[i];
-                            point_t p;
-                            p.x = point[0];
-                            p.y = point[1];
-                            // p.z = point[2];
-                            p.score = point[2];
-                            p.target = point[3];
-                            _points.push_back(p);
-                        }
-                    }
-
-                    return CMD_OK;
+                    praser_event();
                 }
-                memmove(buf, buf + length, offset - length);
-                buf[offset - length] = 0; // clear the last char
-                memset(payload, 0, sizeof(payload));
-                offset -= length;
+
+                if (response["type"] == CMD_TYPE_LOG)
+                {
+                    praser_log();
+                }
+
+                ret = response["code"];
+
+                if (response["type"] == type && strcmp(response["name"], cmd) == 0)
+                {
+                    return ret;
+                }
+            }
+            else
+            {
+                // discard buffer befor suffix
+                memmove(rx_buf, suffix + strlen(RESPONSE_SUFFIX),
+                        offset - (suffix - rx_buf) - strlen(RESPONSE_PREFIX));
+                offset -= suffix - rx_buf + strlen(RESPONSE_SUFFIX);
+                rx_buf[offset] = '\0';
             }
         }
         delay(_wait_delay);
     }
+
     return CMD_ETIMEDOUT;
+}
+
+int SSCMA::invoke(int times, bool filter, bool show)
+{
+    snprintf(tx_buf, sizeof(tx_buf), CMD_PREFIX "%s=%d,%d,%d" CMD_SUFFIX,
+             CMD_AT_INVOKE, times, filter, !show);
+
+    write(tx_buf, strlen(tx_buf));
+
+    if (wait(CMD_TYPE_RESPONSE, CMD_AT_INVOKE) == CMD_OK)
+    {
+        if (wait(CMD_TYPE_EVENT, CMD_AT_INVOKE) == CMD_OK)
+        {
+            return CMD_OK;
+        }
+    }
+
+    return CMD_ETIMEDOUT;
+}
+
+uint32_t SSCMA::ID(bool cache)
+{
+    if (cache && _ID)
+    {
+        return _ID;
+    }
+
+    snprintf(tx_buf, sizeof(tx_buf), CMD_PREFIX "%s" CMD_SUFFIX, CMD_AT_ID);
+
+    write(tx_buf, strlen(tx_buf));
+
+    if (wait(CMD_TYPE_RESPONSE, CMD_AT_ID) == CMD_OK)
+    {
+        _ID = response["data"];
+        return _ID;
+    }
+
+    return 0;
+}
+char *SSCMA::name(bool cache)
+{
+    if (cache && _name[0])
+    {
+        return _name;
+    }
+
+    snprintf(tx_buf, sizeof(tx_buf), CMD_PREFIX "%s" CMD_SUFFIX, CMD_AT_NAME);
+
+    write(tx_buf, strlen(tx_buf));
+
+    if (wait(CMD_TYPE_RESPONSE, CMD_AT_NAME, 3000) == CMD_OK)
+    {
+        strcpy(_name, response["data"]);
+        return _name;
+    }
+
+    return NULL;
 }
