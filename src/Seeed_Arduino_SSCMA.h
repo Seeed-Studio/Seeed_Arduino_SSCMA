@@ -36,13 +36,9 @@
 
 #define I2C_ADDRESS (0x62)
 
-#define HEADER_LEN 4
-#ifdef ARDUINO_ARCH_AVR
-#define MAX_PL_LEN 26
-#else
-#define MAX_PL_LEN 250
-#endif
-#define CHECKSUM_LEN 2
+#define HEADER_LEN (uint8_t)4
+#define MAX_PL_LEN (uint8_t)250
+#define CHECKSUM_LEN (uint8_t)2
 
 #define FEATURE_TRANSPORT 0x10
 #define FEATURE_TRANSPORT_CMD_READ 0x01
@@ -140,7 +136,7 @@ class SSCMA
 {
 private:
     TwoWire *_wire;
-    uint8_t _address;
+    uint16_t _address;
     int _wait_delay;
     perf_t _perf;
     std::vector<boxes_t> _boxes;
@@ -160,12 +156,12 @@ public:
     SSCMA();
     ~SSCMA();
 
-    bool begin(TwoWire *wire = &Wire, int address = I2C_ADDRESS,
+    bool begin(TwoWire *wire = &Wire, uint16_t address = I2C_ADDRESS,
                uint32_t wait_delay = 2, uint32_t clock = 400000);
     int invoke(int times = 1, bool filter = 0, bool show = 0);
-    size_t available();
-    size_t read(char *data, size_t length);
-    size_t write(const char *data, size_t length);
+    int available();
+    int read(char *data, int length);
+    int write(const char *data, int length);
     void reset();
 
     perf_t &perf() { return _perf; }

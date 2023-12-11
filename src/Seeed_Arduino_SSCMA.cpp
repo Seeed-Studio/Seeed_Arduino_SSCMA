@@ -36,7 +36,7 @@ SSCMA::SSCMA()
 
 SSCMA::~SSCMA() {}
 
-bool SSCMA::begin(TwoWire *wire, int address, uint32_t wait_delay,
+bool SSCMA::begin(TwoWire *wire, uint16_t address, uint32_t wait_delay,
                   uint32_t clock)
 {
     _wire = wire;
@@ -69,7 +69,7 @@ void SSCMA::cmd(uint8_t feature, uint8_t cmd, uint16_t len)
     _wire->endTransmission();
 }
 
-size_t SSCMA::available()
+int SSCMA::available()
 {
     uint8_t buf[2] = {0};
     delay(_wait_delay);
@@ -84,17 +84,17 @@ size_t SSCMA::available()
     if (_wire->endTransmission() == 0)
     {
         delay(_wait_delay);
-        _wire->requestFrom(_address, 2);
-        _wire->readBytes(buf, 2);
+        _wire->requestFrom(_address, (uint8_t)2);
+        _wire->readBytes(buf, (uint8_t)2);
     }
 
     return (buf[0] << 8) | buf[1];
 }
 
-size_t SSCMA::read(char *data, size_t length)
+int SSCMA::read(char *data, int length)
 {
     uint16_t packets = length / MAX_PL_LEN;
-    uint16_t remain = length % MAX_PL_LEN;
+    uint8_t remain = length % MAX_PL_LEN;
     for (uint16_t i = 0; i < packets; i++)
     {
         delay(_wait_delay);
@@ -134,7 +134,7 @@ size_t SSCMA::read(char *data, size_t length)
     return length;
 }
 
-size_t SSCMA::write(const char *data, size_t length)
+int SSCMA::write(const char *data, int length)
 {
     // Serial.print("write: ");
     // Serial.write(data, length);
@@ -240,7 +240,7 @@ int SSCMA::wait(int type, const char *cmd, uint32_t timeout)
     while (millis() - startTime <= timeout)
     {
 
-        if (size_t len = available())
+        if (int len = available())
         {
             offset += read(rx_buf + offset, len);
             rx_buf[offset] = '\0';
@@ -252,7 +252,7 @@ int SSCMA::wait(int type, const char *cmd, uint32_t timeout)
             if (char *prefix = strnstr(rx_buf, RESPONSE_PREFIX, suffix - rx_buf))
             {
                 // parse json payload
-                size_t len = suffix - prefix;
+                int len = suffix - prefix;
                 memcpy(payload, prefix + 1, len);
                 payload[len] = '\0';
                 // delete this pyload in rx_buf
