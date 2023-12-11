@@ -147,8 +147,8 @@ private:
     std::vector<classes_t> _classes;
     std::vector<point_t> _points;
 
-    uint32_t _ID = 0;
     char _name[32] = {0};
+    char _ID[32] = {0};
 
     char tx_buf[256] = {0};            // for cmd
     char rx_buf[2048] = {0};           // for response
@@ -173,7 +173,7 @@ public:
     std::vector<classes_t> &classes() { return _classes; }
     std::vector<point_t> &points() { return _points; }
 
-    uint32_t ID(bool cache = true);
+    char *ID(bool cache = true);
     char *name(bool cache = true);
 
 private:

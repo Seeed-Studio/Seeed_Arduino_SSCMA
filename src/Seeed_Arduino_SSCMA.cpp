@@ -136,8 +136,8 @@ size_t SSCMA::read(char *data, size_t length)
 
 size_t SSCMA::write(const char *data, size_t length)
 {
-    Serial.print("write: ");
-    Serial.write(data, length);
+    // Serial.print("write: ");
+    // Serial.write(data, length);
     uint16_t packets = length / MAX_PL_LEN;
     uint16_t remain = length % MAX_PL_LEN;
     for (uint16_t i = 0; i < packets; i++)
@@ -321,7 +321,7 @@ int SSCMA::invoke(int times, bool filter, bool show)
     return CMD_ETIMEDOUT;
 }
 
-uint32_t SSCMA::ID(bool cache)
+char *SSCMA::ID(bool cache)
 {
     if (cache && _ID)
     {
@@ -334,11 +334,11 @@ uint32_t SSCMA::ID(bool cache)
 
     if (wait(CMD_TYPE_RESPONSE, CMD_AT_ID) == CMD_OK)
     {
-        _ID = response["data"];
+        strcpy(_ID, response["data"]);
         return _ID;
     }
 
-    return 0;
+    return NULL;
 }
 char *SSCMA::name(bool cache)
 {
