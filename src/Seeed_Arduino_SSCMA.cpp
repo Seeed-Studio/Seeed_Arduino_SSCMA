@@ -148,7 +148,7 @@ size_t SSCMA::write(const char *data, size_t length)
         _wire->write(FEATURE_TRANSPORT_CMD_WRITE);
         _wire->write(MAX_PL_LEN >> 8);
         _wire->write(MAX_PL_LEN & 0xFF);
-        _wire->write(data + i * MAX_PL_LEN, MAX_PL_LEN);
+        _wire->write((const uint8_t *)(data + i * MAX_PL_LEN), MAX_PL_LEN);
         // TODO checksum
         _wire->write(0);
         _wire->write(0);
@@ -162,7 +162,7 @@ size_t SSCMA::write(const char *data, size_t length)
         _wire->write(FEATURE_TRANSPORT_CMD_WRITE);
         _wire->write(remain >> 8);
         _wire->write(remain & 0xFF);
-        _wire->write(data + packets * MAX_PL_LEN, remain);
+        _wire->write((const uint8_t *)(data + packets * MAX_PL_LEN), remain);
         _wire->endTransmission();
     }
     return length;
