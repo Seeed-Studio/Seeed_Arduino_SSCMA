@@ -136,6 +136,8 @@ class SSCMA
 {
 private:
     TwoWire *_wire;
+    HardwareSerial *_serial;
+    uint32_t _baud;
     uint16_t _address;
     int _wait_delay;
     perf_t _perf;
@@ -158,6 +160,8 @@ public:
 
     bool begin(TwoWire *wire = &Wire, uint16_t address = I2C_ADDRESS,
                uint32_t wait_delay = 2, uint32_t clock = 400000);
+    bool begin(HardwareSerial *serial, uint32_t baud = 921600,
+               uint32_t wait_delay = 2);
     int invoke(int times = 1, bool filter = 0, bool show = 0);
     int available();
     int read(char *data, int length);
@@ -173,8 +177,11 @@ public:
     char *name(bool cache = true);
 
 private:
-    void cmd(uint8_t feature, uint8_t cmd, uint16_t len = 0);
-    int wait(int type, const char *cmd, uint32_t timeout = 500);
+    int i2c_write(const char *data, int length);
+    int i2c_read(char *data, int length);
+    int i2c_available();
+    void i2c_cmd(uint8_t feature, uint8_t cmd, uint16_t len = 0);
+    int wait(int type, const char *cmd, uint32_t timeout = 3000);
     void praser_event();
     void praser_log();
 };

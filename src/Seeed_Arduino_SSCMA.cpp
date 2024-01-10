@@ -40,11 +40,12 @@ bool SSCMA::begin(TwoWire *wire, uint16_t address, uint32_t wait_delay,
                   uint32_t clock)
 {
     _wire = wire;
+    _serial = NULL;
     _address = address;
     _wire->begin();
     _wire->setClock(clock);
     _wait_delay = wait_delay;
-    cmd(FEATURE_TRANSPORT, FEATURE_TRANSPORT_CMD_RESET);
+    i2c_cmd(FEATURE_TRANSPORT, FEATURE_TRANSPORT_CMD_RESET);
 
     offset = 0;
     memset(rx_buf, 0, sizeof(rx_buf));
@@ -55,7 +56,65 @@ bool SSCMA::begin(TwoWire *wire, uint16_t address, uint32_t wait_delay,
     return ID(false) && name(false);
 }
 
-void SSCMA::cmd(uint8_t feature, uint8_t cmd, uint16_t len)
+bool SSCMA::begin(HardwareSerial *serial, uint32_t baud,
+                  uint32_t wait_delay)
+{
+    _serial = serial;
+    _wire = NULL;
+    _baud = baud;
+    _wait_delay = wait_delay;
+    _serial->begin(_baud);
+    _serial->setTimeout(1000);
+    _serial->flush();
+
+    offset = 0;
+    memset(rx_buf, 0, sizeof(rx_buf));
+    memset(tx_buf, 0, sizeof(tx_buf));
+    memset(payload, 0, sizeof(payload));
+    response.clear();
+
+    return ID(false) && name(false);
+}
+
+int SSCMA::write(const char *data, int length)
+{
+    // Serial.print("write: ");
+    // Serial.write(data, length);
+    if (_serial)
+    {
+        return _serial->write(data, length);
+    }
+    else
+    {
+        return i2c_write(data, length);
+    }
+}
+
+int SSCMA::read(char *data, int length)
+{
+    if (_serial)
+    {
+        return _serial->readBytes(data, length);
+    }
+    else
+    {
+        return i2c_read(data, length);
+    }
+}
+
+int SSCMA::available()
+{
+    if (_serial)
+    {
+        return _serial->available();
+    }
+    else
+    {
+        return i2c_available();
+    }
+}
+
+void SSCMA::i2c_cmd(uint8_t feature, uint8_t cmd, uint16_t len)
 {
     delay(_wait_delay);
     _wire->beginTransmission(_address);
@@ -69,7 +128,7 @@ void SSCMA::cmd(uint8_t feature, uint8_t cmd, uint16_t len)
     _wire->endTransmission();
 }
 
-int SSCMA::available()
+int SSCMA::i2c_available()
 {
     uint8_t buf[2] = {0};
     delay(_wait_delay);
@@ -91,7 +150,7 @@ int SSCMA::available()
     return (buf[0] << 8) | buf[1];
 }
 
-int SSCMA::read(char *data, int length)
+int SSCMA::i2c_read(char *data, int length)
 {
     uint16_t packets = length / MAX_PL_LEN;
     uint8_t remain = length % MAX_PL_LEN;
@@ -134,10 +193,8 @@ int SSCMA::read(char *data, int length)
     return length;
 }
 
-int SSCMA::write(const char *data, int length)
+int SSCMA::i2c_write(const char *data, int length)
 {
-    // Serial.print("write: ");
-    // Serial.write(data, length);
     uint16_t packets = length / MAX_PL_LEN;
     uint16_t remain = length % MAX_PL_LEN;
     for (uint16_t i = 0; i < packets; i++)
@@ -237,11 +294,17 @@ int SSCMA::wait(int type, const char *cmd, uint32_t timeout)
 {
     int ret = CMD_OK;
     unsigned long startTime = millis();
+    offset = 0;
     while (millis() - startTime <= timeout)
     {
 
         if (int len = available())
         {
+            if(len + offset > sizeof(rx_buf)){
+                offset = 0;
+                rx_buf[offset] = '\0';
+                return CMD_ENOMEM;
+            } 
             offset += read(rx_buf + offset, len);
             rx_buf[offset] = '\0';
         }

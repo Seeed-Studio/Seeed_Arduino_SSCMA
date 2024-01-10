@@ -10,7 +10,8 @@ SSCMA AI;
 void setup()
 {
     Serial.begin(9600);
-    delay(2000);
+    while(!Serial){};
+    Serial.println("I am here");
     AI.begin(&atSerial);
 }
 
