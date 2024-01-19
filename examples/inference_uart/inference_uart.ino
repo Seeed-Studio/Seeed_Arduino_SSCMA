@@ -1,17 +1,24 @@
 #include <Seeed_Arduino_SSCMA.h>
 
+#ifdef ESP32
 #include <HardwareSerial.h>
 
-//Define two Serial devices mapped to the two internal UARTs
+// Define two Serial devices mapped to the two internal UARTs
 HardwareSerial atSerial(0);
+
+#else
+#define atSerial Serial1
+#endif
 
 SSCMA AI;
 
 void setup()
 {
     Serial.begin(9600);
-    while(!Serial){};
-    Serial.println("I am here");
+    while (!Serial)
+    {
+
+    };
     AI.begin(&atSerial);
 }
 

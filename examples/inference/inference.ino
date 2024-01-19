@@ -1,17 +1,11 @@
 #include <Seeed_Arduino_SSCMA.h>
 
-#include <HardwareSerial.h>
-
-//Define two Serial devices mapped to the two internal UARTs
-HardwareSerial atSerial(0);
-
 SSCMA AI;
 
 void setup()
 {
+    AI.begin();
     Serial.begin(9600);
-    delay(2000);
-    AI.begin(&atSerial);
 }
 
 void loop()
