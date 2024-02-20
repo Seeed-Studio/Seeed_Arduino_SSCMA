@@ -236,6 +236,7 @@ void SSCMA::praser_event()
             _perf.inference = response["data"]["perf"][1];
             _perf.postprocess = response["data"]["perf"][2];
         }
+        
         if (response["data"].containsKey("boxes"))
         {
             _boxes.clear();
@@ -284,6 +285,41 @@ void SSCMA::praser_event()
                 _points.push_back(p);
             }
         }
+
+        if (response["data"].containsKey("keypoints"))
+        {
+
+            _keypoints.clear();
+            JsonArray keypoints = response["data"]["keypoints"];
+            for (size_t i = 0; i < keypoints.size(); i++)
+            {
+                keypoints_t k;
+                JsonArray box = keypoints[i][0];
+                JsonArray points = keypoints[i][1];
+                k.box.x = box[0];
+                k.box.y = box[1];
+                k.box.w = box[2];
+                k.box.h = box[3];
+                k.box.score = box[4];
+                k.box.target = box[5];
+
+                for (size_t j = 0; j < points.size(); j++)
+                {
+                    point_t p;
+                    p.x = points[j][0];
+                    p.y = points[j][1];
+                    //p.z = points[j][2];
+                    p.score = points[j][2];
+                    p.target = points[j][3];
+                    k.points.push_back(p);
+                }
+                _keypoints.push_back(k);
+            }
+        }
+        if (response["data"].containsKey("image"))
+        {
+            _image = response["data"]["image"].as<String>();
+        }
     }
 }
 void SSCMA::praser_log()
@@ -300,11 +336,12 @@ int SSCMA::wait(int type, const char *cmd, uint32_t timeout)
 
         if (int len = available())
         {
-            if(len + offset > sizeof(rx_buf)){
+            if (len + offset > sizeof(rx_buf))
+            {
                 offset = 0;
                 rx_buf[offset] = '\0';
                 return CMD_ENOMEM;
-            } 
+            }
             offset += read(rx_buf + offset, len);
             rx_buf[offset] = '\0';
         }

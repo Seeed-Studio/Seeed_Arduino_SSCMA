@@ -28,6 +28,22 @@
 #ifndef SEEED_ARDUINO_SSCMA_H
 #define SEEED_ARDUINO_SSCMA_H
 
+#ifndef SSCMA_UART_BAUD
+#define SSCMA_UART_BAUD 921600
+#endif
+#ifndef SSCMA_IIC_CLOCK
+#define SSCMA_IIC_CLOCK 400000
+#endif
+#ifndef SSCMA_MAX_RX_SIZE
+#define SSCMA_MAX_RX_SIZE 16384
+#endif
+#ifndef SSCMA_MAX_TX_SIZE
+#define SSCMA_MAX_TX_SIZE 512
+#endif
+#ifndef SSCMA_MAX_PAYLOAD_SIZE
+#define SSCMA_MAX_PAYLOAD_SIZE 16384
+#endif
+
 #include <stdint.h>
 #include <vector>
 #include <Arduino.h>
@@ -127,6 +143,12 @@ typedef struct
 
 typedef struct
 {
+    boxes_t box;
+    std::vector<point_t> points;
+} keypoints_t;
+
+typedef struct
+{
     uint16_t prepocess;
     uint16_t inference;
     uint16_t postprocess;
@@ -144,23 +166,25 @@ private:
     std::vector<boxes_t> _boxes;
     std::vector<classes_t> _classes;
     std::vector<point_t> _points;
+    std::vector<keypoints_t> _keypoints;
 
     char _name[32] = {0};
     char _ID[32] = {0};
-
-    char tx_buf[256] = {0};            // for cmd
-    char rx_buf[2048] = {0};           // for response
-    char payload[512] = {0};           // for json payload
-    uint16_t offset = 0;               // for rx_buf
-    StaticJsonDocument<2048> response; // for json response
+    
+    char tx_buf[SSCMA_MAX_TX_SIZE];       // for cmd
+    char rx_buf[SSCMA_MAX_RX_SIZE];       // for response
+    char payload[SSCMA_MAX_PAYLOAD_SIZE]; // for json payload
+    uint16_t offset = 0;                  // for rx_buf
+    StaticJsonDocument<2048> response;    // for json response
+    String _image = "";
 
 public:
     SSCMA();
     ~SSCMA();
 
     bool begin(TwoWire *wire = &Wire, uint16_t address = I2C_ADDRESS,
-               uint32_t wait_delay = 2, uint32_t clock = 400000);
-    bool begin(HardwareSerial *serial, uint32_t baud = 921600,
+               uint32_t wait_delay = 2, uint32_t clock = SSCMA_IIC_CLOCK);
+    bool begin(HardwareSerial *serial, uint32_t baud = SSCMA_UART_BAUD,
                uint32_t wait_delay = 2);
     int invoke(int times = 1, bool filter = 0, bool show = 0);
     int available();
@@ -172,9 +196,13 @@ public:
     std::vector<boxes_t> &boxes() { return _boxes; }
     std::vector<classes_t> &classes() { return _classes; }
     std::vector<point_t> &points() { return _points; }
+    std::vector<keypoints_t> &keypoints() { return _keypoints; }
+    
 
     char *ID(bool cache = true);
     char *name(bool cache = true);
+
+    String last_image() { return _image; }
 
 private:
     int i2c_write(const char *data, int length);
