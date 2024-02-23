@@ -34,20 +34,24 @@
 #ifndef SSCMA_IIC_CLOCK
 #define SSCMA_IIC_CLOCK 400000
 #endif
+#ifndef SSCMA_SPI_CLOCK
+#define SSCMA_SPI_CLOCK 4000000
+#endif
 #ifndef SSCMA_MAX_RX_SIZE
-#define SSCMA_MAX_RX_SIZE 16384
+#define SSCMA_MAX_RX_SIZE 32768
 #endif
 #ifndef SSCMA_MAX_TX_SIZE
-#define SSCMA_MAX_TX_SIZE 512
+#define SSCMA_MAX_TX_SIZE 1024
 #endif
 #ifndef SSCMA_MAX_PAYLOAD_SIZE
-#define SSCMA_MAX_PAYLOAD_SIZE 16384
+#define SSCMA_MAX_PAYLOAD_SIZE 32768
 #endif
 
 #include <stdint.h>
 #include <vector>
 #include <Arduino.h>
 #include <Wire.h>
+#include <SPI.h>
 #include <ArduinoJson.h>
 
 #define I2C_ADDRESS (0x62)
@@ -55,6 +59,8 @@
 #define HEADER_LEN (uint8_t)4
 #define MAX_PL_LEN (uint8_t)250
 #define CHECKSUM_LEN (uint8_t)2
+
+#define PACKET_SIZE (uint16_t)(HEADER_LEN + MAX_PL_LEN + CHECKSUM_LEN)
 
 #define FEATURE_TRANSPORT 0x10
 #define FEATURE_TRANSPORT_CMD_READ 0x01
@@ -159,6 +165,9 @@ class SSCMA
 private:
     TwoWire *_wire;
     HardwareSerial *_serial;
+    SPIClass *_spi;
+    int32_t _cs;
+    int32_t _sync;
     uint32_t _baud;
     uint16_t _address;
     int _wait_delay;
@@ -170,7 +179,7 @@ private:
 
     char _name[32] = {0};
     char _ID[32] = {0};
-    
+
     char tx_buf[SSCMA_MAX_TX_SIZE];       // for cmd
     char rx_buf[SSCMA_MAX_RX_SIZE];       // for response
     char payload[SSCMA_MAX_PAYLOAD_SIZE]; // for json payload
@@ -186,6 +195,7 @@ public:
                uint32_t wait_delay = 2, uint32_t clock = SSCMA_IIC_CLOCK);
     bool begin(HardwareSerial *serial, uint32_t baud = SSCMA_UART_BAUD,
                uint32_t wait_delay = 2);
+    bool begin(SPIClass *spi, int32_t cs = -1, int32_t sync = -1, uint32_t baud = SSCMA_SPI_CLOCK, uint32_t wait_delay = 2);
     int invoke(int times = 1, bool filter = 0, bool show = 0);
     int available();
     int read(char *data, int length);
@@ -197,7 +207,6 @@ public:
     std::vector<classes_t> &classes() { return _classes; }
     std::vector<point_t> &points() { return _points; }
     std::vector<keypoints_t> &keypoints() { return _keypoints; }
-    
 
     char *ID(bool cache = true);
     char *name(bool cache = true);
@@ -208,7 +217,13 @@ private:
     int i2c_write(const char *data, int length);
     int i2c_read(char *data, int length);
     int i2c_available();
-    void i2c_cmd(uint8_t feature, uint8_t cmd, uint16_t len = 0);
+    void i2c_cmd(uint8_t feature, uint8_t cmd, uint16_t len = 0, uint8_t *data = NULL);
+
+    int spi_write(const char *data, int length);
+    int spi_read(char *data, int length);
+    int spi_available();
+    void spi_cmd(uint8_t feature, uint8_t cmd, uint16_t len = 0, uint8_t *data = NULL);
+
     int wait(int type, const char *cmd, uint32_t timeout = 3000);
     void praser_event();
     void praser_log();

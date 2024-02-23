@@ -46,7 +46,6 @@ bool SSCMA::begin(TwoWire *wire, uint16_t address, uint32_t wait_delay,
     _wire->setClock(clock);
     _wait_delay = wait_delay;
     i2c_cmd(FEATURE_TRANSPORT, FEATURE_TRANSPORT_CMD_RESET);
-
     offset = 0;
     memset(rx_buf, 0, sizeof(rx_buf));
     memset(tx_buf, 0, sizeof(tx_buf));
@@ -76,6 +75,36 @@ bool SSCMA::begin(HardwareSerial *serial, uint32_t baud,
     return ID(false) && name(false);
 }
 
+bool SSCMA::begin(SPIClass *spi, int32_t cs, int32_t sync, uint32_t baud, uint32_t wait_delay)
+{
+    _spi = spi;
+    _cs = cs;
+    _sync = sync;
+    _baud = baud;
+    _wait_delay = wait_delay;
+
+    _spi->begin();
+
+    if (_cs >= 0)
+    {
+        pinMode(_cs, OUTPUT);
+        digitalWrite(_cs, HIGH);
+    }
+
+    if (_sync >= 0)
+    {
+        pinMode(_sync, INPUT);
+    }
+
+    offset = 0;
+    memset(rx_buf, 0, sizeof(rx_buf));
+    memset(tx_buf, 0, sizeof(tx_buf));
+    memset(payload, 0, sizeof(payload));
+    response.clear();
+
+    return true;
+}
+
 int SSCMA::write(const char *data, int length)
 {
     // Serial.print("write: ");
@@ -83,6 +112,10 @@ int SSCMA::write(const char *data, int length)
     if (_serial)
     {
         return _serial->write(data, length);
+    }
+    else if (_spi)
+    {
+        return spi_write(data, length);
     }
     else
     {
@@ -96,6 +129,10 @@ int SSCMA::read(char *data, int length)
     {
         return _serial->readBytes(data, length);
     }
+    else if (_spi)
+    {
+        return spi_read(data, length);
+    }
     else
     {
         return i2c_read(data, length);
@@ -108,13 +145,17 @@ int SSCMA::available()
     {
         return _serial->available();
     }
+    else if (_spi)
+    {
+        return spi_available();
+    }
     else
     {
         return i2c_available();
     }
 }
 
-void SSCMA::i2c_cmd(uint8_t feature, uint8_t cmd, uint16_t len)
+void SSCMA::i2c_cmd(uint8_t feature, uint8_t cmd, uint16_t len, uint8_t *data)
 {
     delay(_wait_delay);
     _wire->beginTransmission(_address);
@@ -122,6 +163,10 @@ void SSCMA::i2c_cmd(uint8_t feature, uint8_t cmd, uint16_t len)
     _wire->write(cmd);
     _wire->write(len >> 8);
     _wire->write(len & 0xFF);
+    if (data != NULL)
+    {
+        _wire->write(data, len);
+    }
     // TODO checksum
     _wire->write(0);
     _wire->write(0);
@@ -225,6 +270,126 @@ int SSCMA::i2c_write(const char *data, int length)
     return length;
 }
 
+void SSCMA::spi_cmd(uint8_t feature, uint8_t cmd, uint16_t len, uint8_t *data)
+{
+
+    tx_buf[0] = feature;
+    tx_buf[1] = cmd;
+    tx_buf[2] = len >> 8;
+    tx_buf[3] = len & 0xFF;
+    if (data != NULL)
+        memcpy(&tx_buf[4], data, len);
+    //
+    tx_buf[4 + len] = 0xFF;
+    tx_buf[5 + len] = 0xFF;
+    if (_cs >= 0)
+    {
+        digitalWrite(_cs, LOW);
+    }
+    _spi->beginTransaction(SPISettings(_baud, MSBFIRST, SPI_MODE0));
+    _spi->transfer(tx_buf, PACKET_SIZE);
+    _spi->endTransaction();
+    if (_cs >= 0)
+    {
+        digitalWrite(_cs, HIGH);
+    }
+    delay(_wait_delay);
+}
+
+int SSCMA::spi_available()
+{
+    uint16_t size;
+
+    if (_sync >= 0)
+    {
+        if (digitalRead(_sync) == LOW)
+            return 0;
+    }
+
+    spi_cmd(FEATURE_TRANSPORT, FEATURE_TRANSPORT_CMD_AVAILABLE, 0, NULL);
+    if (_cs >= 0)
+    {
+        digitalWrite(_cs, LOW);
+    }
+    _spi->beginTransaction(SPISettings(_baud, MSBFIRST, SPI_MODE0));
+    size = _spi->transfer16(0xFFFF);
+    _spi->endTransaction();
+    if (_cs >= 0)
+    {
+        digitalWrite(_cs, HIGH);
+    }
+    return size;
+}
+
+int SSCMA::spi_read(char *data, int length)
+{
+    uint16_t packets = length / MAX_PL_LEN;
+    uint8_t remain = length % MAX_PL_LEN;
+    for (uint16_t i = 0; i < packets; i++)
+    {
+        spi_cmd(FEATURE_TRANSPORT, FEATURE_TRANSPORT_CMD_READ, MAX_PL_LEN, NULL);
+        if (_cs >= 0)
+        {
+            digitalWrite(_cs, LOW);
+        }
+        _spi->beginTransaction(SPISettings(_baud, MSBFIRST, SPI_MODE0));
+        // #ifdef ESP_PLATFORM
+        //         _spi->transferBytes(data + i * MAX_PL_LEN, data + i * MAX_PL_LEN, MAX_PL_LEN);
+        // #else
+        for (int j = 0; j < MAX_PL_LEN; j++)
+        {
+            data[i * MAX_PL_LEN + j] = _spi->transfer(0xFF);
+        }
+        // #endif
+        _spi->endTransaction();
+        if (_cs >= 0)
+        {
+            digitalWrite(_cs, HIGH);
+        }
+    }
+    if (remain)
+    {
+        spi_cmd(FEATURE_TRANSPORT, FEATURE_TRANSPORT_CMD_READ, remain, NULL);
+        if (_cs >= 0)
+        {
+            digitalWrite(_cs, LOW);
+        }
+        _spi->beginTransaction(SPISettings(_baud, MSBFIRST, SPI_MODE0));
+
+        // #ifdef ESP_PLATFORM
+        //         _spi->transferBytes(data + packets * MAX_PL_LEN, data + packets * MAX_PL_LEN, remain);
+        // #else
+        for (int j = 0; j < remain; j++)
+        {
+            data[packets * MAX_PL_LEN + j] = _spi->transfer(0xFF);
+        }
+        // #endif
+
+        _spi->endTransaction();
+
+        if (_cs >= 0)
+        {
+            digitalWrite(_cs, HIGH);
+        }
+    }
+    return length;
+}
+
+int SSCMA::spi_write(const char *data, int length)
+{
+    uint16_t packets = length / MAX_PL_LEN;
+    uint16_t remain = length % MAX_PL_LEN;
+    for (uint16_t i = 0; i < packets; i++)
+    {
+        spi_cmd(FEATURE_TRANSPORT, FEATURE_TRANSPORT_CMD_WRITE, MAX_PL_LEN, (uint8_t *)data);
+    }
+    if (remain)
+    {
+        spi_cmd(FEATURE_TRANSPORT, FEATURE_TRANSPORT_CMD_WRITE, remain, (uint8_t *)data);
+    }
+    return length;
+}
+
 void SSCMA::praser_event()
 {
     if (strstr(response["name"], CMD_AT_INVOKE))
@@ -236,7 +401,7 @@ void SSCMA::praser_event()
             _perf.inference = response["data"]["perf"][1];
             _perf.postprocess = response["data"]["perf"][2];
         }
-        
+
         if (response["data"].containsKey("boxes"))
         {
             _boxes.clear();
@@ -308,7 +473,7 @@ void SSCMA::praser_event()
                     point_t p;
                     p.x = points[j][0];
                     p.y = points[j][1];
-                    //p.z = points[j][2];
+                    // p.z = points[j][2];
                     p.score = points[j][2];
                     p.target = points[j][3];
                     k.points.push_back(p);
