@@ -17,7 +17,7 @@ void setup()
     Serial.println("Proxy start");
 }
 
-char buf[4096];
+char buf[32768];
 void loop()
 {
     int s_len = Serial.available();
@@ -26,15 +26,16 @@ void loop()
         int len = Serial.readBytes((char *)buf, s_len);
         AI.write(buf, len);
     }
+    memset(buf, 0x00, s_len);
     int t_len = AI.available();
     if (t_len)
     {
-        if (t_len > 512)
-        {
-            t_len = 512;
+        if (t_len > sizeof(buf)) {
+            t_len = sizeof(buf);
         }
-
         AI.read(buf, t_len);
-        Serial.write(buf, t_len);
+        // Serial.write(buf, t_len);
+        Serial.write(buf, 80);
+        Serial.flush();
     }
 }

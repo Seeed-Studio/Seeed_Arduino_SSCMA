@@ -272,16 +272,23 @@ int SSCMA::i2c_write(const char *data, int length)
 
 void SSCMA::spi_cmd(uint8_t feature, uint8_t cmd, uint16_t len, uint8_t *data)
 {
-
+    delay(_wait_delay);
     tx_buf[0] = feature;
     tx_buf[1] = cmd;
     tx_buf[2] = len >> 8;
     tx_buf[3] = len & 0xFF;
     if (data != NULL)
+    {
         memcpy(&tx_buf[4], data, len);
-    //
-    tx_buf[4 + len] = 0xFF;
-    tx_buf[5 + len] = 0xFF;
+        tx_buf[4 + len] = 0xFF;
+        tx_buf[5 + len] = 0xFF;
+    }
+    else
+    {
+        tx_buf[4] = 0xFF;
+        tx_buf[5] = 0xFF;
+    }
+
     if (_cs >= 0)
     {
         digitalWrite(_cs, LOW);
@@ -318,29 +325,23 @@ int SSCMA::spi_available()
     {
         digitalWrite(_cs, HIGH);
     }
+    delay(_wait_delay);
     return size;
 }
 
 int SSCMA::spi_read(char *data, int length)
 {
-    uint16_t packets = length / MAX_PL_LEN;
-    uint8_t remain = length % MAX_PL_LEN;
+    uint16_t packets = length / MAX_SPI_PL_LEN;
+    uint16_t remain = length % MAX_SPI_PL_LEN;
     for (uint16_t i = 0; i < packets; i++)
     {
-        spi_cmd(FEATURE_TRANSPORT, FEATURE_TRANSPORT_CMD_READ, MAX_PL_LEN, NULL);
+        spi_cmd(FEATURE_TRANSPORT, FEATURE_TRANSPORT_CMD_READ, MAX_SPI_PL_LEN, NULL);
         if (_cs >= 0)
         {
             digitalWrite(_cs, LOW);
         }
         _spi->beginTransaction(SPISettings(_baud, MSBFIRST, SPI_MODE0));
-        // #ifdef ESP_PLATFORM
-        //         _spi->transferBytes(data + i * MAX_PL_LEN, data + i * MAX_PL_LEN, MAX_PL_LEN);
-        // #else
-        for (int j = 0; j < MAX_PL_LEN; j++)
-        {
-            data[i * MAX_PL_LEN + j] = _spi->transfer(0xFF);
-        }
-        // #endif
+        _spi->transfer(data + i * MAX_SPI_PL_LEN, MAX_SPI_PL_LEN);
         _spi->endTransaction();
         if (_cs >= 0)
         {
@@ -355,15 +356,7 @@ int SSCMA::spi_read(char *data, int length)
             digitalWrite(_cs, LOW);
         }
         _spi->beginTransaction(SPISettings(_baud, MSBFIRST, SPI_MODE0));
-
-        // #ifdef ESP_PLATFORM
-        //         _spi->transferBytes(data + packets * MAX_PL_LEN, data + packets * MAX_PL_LEN, remain);
-        // #else
-        for (int j = 0; j < remain; j++)
-        {
-            data[packets * MAX_PL_LEN + j] = _spi->transfer(0xFF);
-        }
-        // #endif
+        _spi->transfer(data + packets * MAX_SPI_PL_LEN, remain);
 
         _spi->endTransaction();
 
