@@ -38,13 +38,13 @@
 #define SSCMA_SPI_CLOCK 12000000
 #endif
 #ifndef SSCMA_MAX_RX_SIZE
-#define SSCMA_MAX_RX_SIZE 32768
+#define SSCMA_MAX_RX_SIZE 2 * 48 * 1024
 #endif
 #ifndef SSCMA_MAX_TX_SIZE
 #define SSCMA_MAX_TX_SIZE 1024
 #endif
 #ifndef SSCMA_MAX_PAYLOAD_SIZE
-#define SSCMA_MAX_PAYLOAD_SIZE 32768
+#define SSCMA_MAX_PAYLOAD_SIZE 48 * 1024
 #endif
 
 #include <stdint.h>
@@ -88,8 +88,12 @@ const char CMD_AT_STATS[] = "STAT";
 const char CMD_AT_BREAK[] = "BREAK";
 const char CMD_AT_RESET[] = "RST";
 const char CMD_AT_WIFI[] = "WIFI";
+const char CMD_AT_WIFI_STA[] = "WIFISTA"; // wifi status
+const char CMD_AT_WIFI_IN4[] = "WIFIIN4";
+const char CMD_AT_WIFI_IN6[] = "WIFIIN6";
 const char CMD_AT_MQTTSERVER[] = "MQTTSERVER";
 const char CMD_AT_MQTTPUBSUB[] = "MQTTPUBSUB";
+const char CMD_AT_MQTTSTA[] = "MQTTSTA"; // mqtt status
 const char CMD_AT_INVOKE[] = "INVOKE";
 const char CMD_AT_SAMPLE[] = "SAMPLE";
 const char CMD_AT_INFO[] = "INFO";
@@ -122,6 +126,8 @@ const char EVENT_SUPERVISOR[] = "SUPERVISOR";
 
 const char LOG_AT[] = "AT";
 const char LOG_LOG[] = "LOG";
+
+typedef std::function<void(const char *resp)> ResponseCallback;
 
 typedef struct
 {
@@ -161,6 +167,22 @@ typedef struct
     uint16_t postprocess;
 } perf_t;
 
+typedef struct
+{
+    char ssid[32];
+    char password[32];
+} wifi_t;
+
+typedef struct
+{
+    char server[64];
+    uint16_t port;
+    char username[32];
+    char password[32];
+    char client_id[32];
+    bool use_ssl;
+} mqtt_t;
+
 class SSCMA
 {
 private:
@@ -181,11 +203,10 @@ private:
     char _name[32] = {0};
     char _ID[32] = {0};
 
-    char tx_buf[SSCMA_MAX_TX_SIZE];       // for cmd
-    char rx_buf[SSCMA_MAX_RX_SIZE];       // for response
-    char payload[SSCMA_MAX_PAYLOAD_SIZE]; // for json payload
-    uint16_t offset = 0;                  // for rx_buf
-    StaticJsonDocument<2048> response;    // for json response
+    uint32_t rx_ofs = 0; // for rx_buf parse
+    uint32_t rx_end = 0;
+    
+    JsonDocument response;    // for json response
     String _image = "";
 
 public:
@@ -202,6 +223,7 @@ public:
     int read(char *data, int length);
     int write(const char *data, int length);
     void reset();
+    void fetch(ResponseCallback RespCallback);
 
     perf_t &perf() { return _perf; }
     std::vector<boxes_t> &boxes() { return _boxes; }
@@ -209,10 +231,17 @@ public:
     std::vector<point_t> &points() { return _points; }
     std::vector<keypoints_t> &keypoints() { return _keypoints; }
 
+    int WIFI(wifi_t &wifi);
+    int MQTT(mqtt_t &mqtt);
+    
     char *ID(bool cache = true);
     char *name(bool cache = true);
 
     String last_image() { return _image; }
+
+    char tx_buf[SSCMA_MAX_TX_SIZE];       // for cmd
+    char rx_buf[SSCMA_MAX_RX_SIZE];       // for response
+    char payload[SSCMA_MAX_PAYLOAD_SIZE]; // for json payload
 
 private:
     int i2c_write(const char *data, int length);
