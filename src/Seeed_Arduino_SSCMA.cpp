@@ -225,6 +225,14 @@ int SSCMA::i2c_write(const char *data, int length)
     return length;
 }
 
+void SSCMA::praser_response()
+{
+    if (response["data"].containsKey("info"))
+    {
+        _info = response["data"]["info"].as<String>();
+    }
+}
+
 void SSCMA::praser_event()
 {
     if (strstr(response["name"], CMD_AT_INVOKE))
@@ -370,7 +378,10 @@ int SSCMA::wait(int type, const char *cmd, uint32_t timeout)
                     // Serial.println(error.c_str());
                     continue;
                 }
-
+                if (response["type"] == CMD_TYPE_RESPONSE)
+                {
+                    praser_response();
+                }
                 if (response["type"] == CMD_TYPE_EVENT)
                 {
                     praser_event();
@@ -416,6 +427,21 @@ int SSCMA::invoke(int times, bool filter, bool show)
         {
             return CMD_OK;
         }
+    }
+
+    return CMD_ETIMEDOUT;
+}
+
+int SSCMA::fetch_info()
+{
+    snprintf(tx_buf, sizeof(tx_buf), CMD_PREFIX "%s?" CMD_SUFFIX,
+             CMD_AT_INFO);
+
+    write(tx_buf, strlen(tx_buf));
+
+    if (wait(CMD_TYPE_RESPONSE, "INFO?") == CMD_OK)
+    {
+        return CMD_OK;
     }
 
     return CMD_ETIMEDOUT;

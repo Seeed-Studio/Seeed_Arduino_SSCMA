@@ -158,7 +158,7 @@ class SSCMA
 {
 private:
     TwoWire *_wire;
-    HardwareSerial *_serial;
+    HardwareSerial *_serial; /* HardwareSerial is appreciated */
     uint32_t _baud;
     uint16_t _address;
     int _wait_delay;
@@ -170,13 +170,18 @@ private:
 
     char _name[32] = {0};
     char _ID[32] = {0};
-    
+
     char tx_buf[SSCMA_MAX_TX_SIZE];       // for cmd
     char rx_buf[SSCMA_MAX_RX_SIZE];       // for response
     char payload[SSCMA_MAX_PAYLOAD_SIZE]; // for json payload
     uint16_t offset = 0;                  // for rx_buf
-    StaticJsonDocument<2048> response;    // for json response
+#if ARDUINOJSON_VERSION_MAJOR == 7
+    JsonDocument response; // for json response
+#else
+    StaticJsonDocument<2048> response; // for json response
+#endif
     String _image = "";
+    String _info = "";
 
 public:
     SSCMA();
@@ -192,24 +197,26 @@ public:
     int write(const char *data, int length);
     void reset();
 
+    int fetch_info();
+
     perf_t &perf() { return _perf; }
     std::vector<boxes_t> &boxes() { return _boxes; }
     std::vector<classes_t> &classes() { return _classes; }
     std::vector<point_t> &points() { return _points; }
     std::vector<keypoints_t> &keypoints() { return _keypoints; }
-    
 
     char *ID(bool cache = true);
     char *name(bool cache = true);
 
     String last_image() { return _image; }
-
+    String info() { return _info; }
 private:
     int i2c_write(const char *data, int length);
     int i2c_read(char *data, int length);
     int i2c_available();
     void i2c_cmd(uint8_t feature, uint8_t cmd, uint16_t len = 0);
     int wait(int type, const char *cmd, uint32_t timeout = 3000);
+    void praser_response();
     void praser_event();
     void praser_log();
 };
