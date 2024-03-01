@@ -34,27 +34,34 @@
 #ifndef SSCMA_IIC_CLOCK
 #define SSCMA_IIC_CLOCK 400000
 #endif
+#ifndef SSCMA_SPI_CLOCK
+#define SSCMA_SPI_CLOCK 12000000
+#endif
 #ifndef SSCMA_MAX_RX_SIZE
-#define SSCMA_MAX_RX_SIZE 16384
+#define SSCMA_MAX_RX_SIZE 2 * 48 * 1024
 #endif
 #ifndef SSCMA_MAX_TX_SIZE
-#define SSCMA_MAX_TX_SIZE 512
+#define SSCMA_MAX_TX_SIZE 1024
 #endif
 #ifndef SSCMA_MAX_PAYLOAD_SIZE
-#define SSCMA_MAX_PAYLOAD_SIZE 16384
+#define SSCMA_MAX_PAYLOAD_SIZE 48 * 1024
 #endif
 
 #include <stdint.h>
 #include <vector>
 #include <Arduino.h>
 #include <Wire.h>
+#include <SPI.h>
 #include <ArduinoJson.h>
 
 #define I2C_ADDRESS (0x62)
 
 #define HEADER_LEN (uint8_t)4
 #define MAX_PL_LEN (uint8_t)250
+#define MAX_SPI_PL_LEN (uint16_t)4095
 #define CHECKSUM_LEN (uint8_t)2
+
+#define PACKET_SIZE (uint16_t)(HEADER_LEN + MAX_PL_LEN + CHECKSUM_LEN)
 
 #define FEATURE_TRANSPORT 0x10
 #define FEATURE_TRANSPORT_CMD_READ 0x01
@@ -81,8 +88,12 @@ const char CMD_AT_STATS[] = "STAT";
 const char CMD_AT_BREAK[] = "BREAK";
 const char CMD_AT_RESET[] = "RST";
 const char CMD_AT_WIFI[] = "WIFI";
+const char CMD_AT_WIFI_STA[] = "WIFISTA"; // wifi status
+const char CMD_AT_WIFI_IN4[] = "WIFIIN4";
+const char CMD_AT_WIFI_IN6[] = "WIFIIN6";
 const char CMD_AT_MQTTSERVER[] = "MQTTSERVER";
 const char CMD_AT_MQTTPUBSUB[] = "MQTTPUBSUB";
+const char CMD_AT_MQTTSTA[] = "MQTTSTA"; // mqtt status
 const char CMD_AT_INVOKE[] = "INVOKE";
 const char CMD_AT_SAMPLE[] = "SAMPLE";
 const char CMD_AT_INFO[] = "INFO";
@@ -115,6 +126,8 @@ const char EVENT_SUPERVISOR[] = "SUPERVISOR";
 
 const char LOG_AT[] = "AT";
 const char LOG_LOG[] = "LOG";
+
+typedef std::function<void(const char *resp)> ResponseCallback;
 
 typedef struct
 {
@@ -154,11 +167,30 @@ typedef struct
     uint16_t postprocess;
 } perf_t;
 
+typedef struct
+{
+    char ssid[32];
+    char password[32];
+} wifi_t;
+
+typedef struct
+{
+    char server[64];
+    uint16_t port;
+    char username[32];
+    char password[32];
+    char client_id[32];
+    bool use_ssl;
+} mqtt_t;
+
 class SSCMA
 {
 private:
     TwoWire *_wire;
     HardwareSerial *_serial;
+    SPIClass *_spi;
+    int32_t _cs;
+    int32_t _sync;
     uint32_t _baud;
     uint16_t _address;
     int _wait_delay;
@@ -170,12 +202,11 @@ private:
 
     char _name[32] = {0};
     char _ID[32] = {0};
+
+    uint32_t rx_ofs = 0; // for rx_buf parse
+    uint32_t rx_end = 0;
     
-    char tx_buf[SSCMA_MAX_TX_SIZE];       // for cmd
-    char rx_buf[SSCMA_MAX_RX_SIZE];       // for response
-    char payload[SSCMA_MAX_PAYLOAD_SIZE]; // for json payload
-    uint16_t offset = 0;                  // for rx_buf
-    StaticJsonDocument<2048> response;    // for json response
+    JsonDocument response;    // for json response
     String _image = "";
 
 public:
@@ -186,29 +217,43 @@ public:
                uint32_t wait_delay = 2, uint32_t clock = SSCMA_IIC_CLOCK);
     bool begin(HardwareSerial *serial, uint32_t baud = SSCMA_UART_BAUD,
                uint32_t wait_delay = 2);
+    bool begin(SPIClass *spi, int32_t cs = -1, int32_t sync = -1, uint32_t baud = SSCMA_SPI_CLOCK, uint32_t wait_delay = 1);
     int invoke(int times = 1, bool filter = 0, bool show = 0);
     int available();
     int read(char *data, int length);
     int write(const char *data, int length);
     void reset();
+    void fetch(ResponseCallback RespCallback);
 
     perf_t &perf() { return _perf; }
     std::vector<boxes_t> &boxes() { return _boxes; }
     std::vector<classes_t> &classes() { return _classes; }
     std::vector<point_t> &points() { return _points; }
     std::vector<keypoints_t> &keypoints() { return _keypoints; }
-    
 
+    int WIFI(wifi_t &wifi);
+    int MQTT(mqtt_t &mqtt);
+    
     char *ID(bool cache = true);
     char *name(bool cache = true);
 
     String last_image() { return _image; }
 
+    char tx_buf[SSCMA_MAX_TX_SIZE];       // for cmd
+    char rx_buf[SSCMA_MAX_RX_SIZE];       // for response
+    char payload[SSCMA_MAX_PAYLOAD_SIZE]; // for json payload
+
 private:
     int i2c_write(const char *data, int length);
     int i2c_read(char *data, int length);
     int i2c_available();
-    void i2c_cmd(uint8_t feature, uint8_t cmd, uint16_t len = 0);
+    void i2c_cmd(uint8_t feature, uint8_t cmd, uint16_t len = 0, uint8_t *data = NULL);
+
+    int spi_write(const char *data, int length);
+    int spi_read(char *data, int length);
+    int spi_available();
+    void spi_cmd(uint8_t feature, uint8_t cmd, uint16_t len = 0, uint8_t *data = NULL);
+
     int wait(int type, const char *cmd, uint32_t timeout = 3000);
     void praser_event();
     void praser_log();
