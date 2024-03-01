@@ -56,7 +56,6 @@ void setup()
             Serial.println(error.c_str());
             return;
         }
-        JsonDocument doc;
         Serial.printf("model_name: %s \n", doc["model_name"]);
     }
 }
