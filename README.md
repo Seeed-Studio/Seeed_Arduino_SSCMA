@@ -80,6 +80,7 @@ void loop()
 - `boxes()`: Returns the bounding boxes of the sensor.
 - `classes()`: Returns the classification results of the sensor.
 - `points()`: Returns the point cloud data of the sensor.
+- `fetch_info`: Get the info from Vision V2.
 
 ## Compatibility
 
