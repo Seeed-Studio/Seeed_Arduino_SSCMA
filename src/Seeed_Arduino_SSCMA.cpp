@@ -374,11 +374,11 @@ int SSCMA::spi_write(const char *data, int length)
     uint16_t remain = length % MAX_PL_LEN;
     for (uint16_t i = 0; i < packets; i++)
     {
-        spi_cmd(FEATURE_TRANSPORT, FEATURE_TRANSPORT_CMD_WRITE, MAX_PL_LEN, (uint8_t *)data);
+        spi_cmd(FEATURE_TRANSPORT, FEATURE_TRANSPORT_CMD_WRITE, MAX_PL_LEN, (uint8_t *)data + i * MAX_PL_LEN);
     }
     if (remain)
     {
-        spi_cmd(FEATURE_TRANSPORT, FEATURE_TRANSPORT_CMD_WRITE, remain, (uint8_t *)data);
+        spi_cmd(FEATURE_TRANSPORT, FEATURE_TRANSPORT_CMD_WRITE, remain, (uint8_t *)data + packets * MAX_PL_LEN);
     }
     return length;
 }
@@ -483,7 +483,6 @@ void SSCMA::praser_log()
 {
 }
 
-
 int SSCMA::wait(int type, const char *cmd, uint32_t timeout)
 {
     int ret = CMD_OK;
@@ -491,15 +490,18 @@ int SSCMA::wait(int type, const char *cmd, uint32_t timeout)
     while (millis() - startTime <= timeout)
     {
         int len = available();
-        if (len) {
-            if (len + rx_end > sizeof(rx_buf)) {
+        if (len)
+        {
+            if (len + rx_end > sizeof(rx_buf))
+            {
                 rx_end = 0;
                 return CMD_ENOMEM;
             }
             rx_end += read(rx_buf + rx_end, len);
             rx_buf[rx_end] = '\0';
         }
-        while (char *suffix = strnstr(rx_buf + rx_ofs, RESPONSE_SUFFIX, rx_end - rx_ofs)) {
+        while (char *suffix = strnstr(rx_buf + rx_ofs, RESPONSE_SUFFIX, rx_end - rx_ofs))
+        {
             if (char *prefix = strnstr(rx_buf + rx_ofs, RESPONSE_PREFIX, suffix - rx_buf - rx_ofs))
             {
                 // get json payload
@@ -510,26 +512,32 @@ int SSCMA::wait(int type, const char *cmd, uint32_t timeout)
                 // parse json response
                 response.clear();
                 DeserializationError error = deserializeJson(response, payload);
-                if (error) {
+                if (error)
+                {
                     // Serial.print(F("deserializeJson() failed: "));
                     // Serial.println(error.c_str());
                     continue;
                 }
 
-                if (response["type"] == CMD_TYPE_EVENT) {
+                if (response["type"] == CMD_TYPE_EVENT)
+                {
                     praser_event();
                 }
 
-                if (response["type"] == CMD_TYPE_LOG) {
+                if (response["type"] == CMD_TYPE_LOG)
+                {
                     praser_log();
                 }
 
                 ret = response["code"];
-     
-                if (response["type"] == type && strcmp(response["name"], cmd) == 0) {
+
+                if (response["type"] == type && strcmp(response["name"], cmd) == 0)
+                {
                     return ret;
                 }
-            } else {
+            }
+            else
+            {
                 len = suffix - rx_buf;
             }
             rx_ofs += len + strlen(RESPONSE_SUFFIX);
@@ -545,8 +553,10 @@ int SSCMA::wait(int type, const char *cmd, uint32_t timeout)
 void SSCMA::fetch(ResponseCallback RespCallback)
 {
     int len = available();
-    if (len) {
-        if (len + rx_end > sizeof(rx_buf)) {
+    if (len)
+    {
+        if (len + rx_end > sizeof(rx_buf))
+        {
             rx_end = 0;
         }
         rx_end += read(rx_buf + rx_end, len);
@@ -555,12 +565,15 @@ void SSCMA::fetch(ResponseCallback RespCallback)
     }
     while (char *suffix = strnstr(rx_buf + rx_ofs, RESPONSE_SUFFIX, rx_end - rx_ofs))
     {
-        if (char *prefix = strnstr(rx_buf + rx_ofs, RESPONSE_PREFIX, suffix - rx_buf - rx_ofs)) {
+        if (char *prefix = strnstr(rx_buf + rx_ofs, RESPONSE_PREFIX, suffix - rx_buf - rx_ofs))
+        {
             len = suffix - prefix + strlen(RESPONSE_SUFFIX);
             memcpy(payload, prefix, len);
             payload[len] = '\0';
             RespCallback(payload);
-        } else {
+        }
+        else
+        {
             len = suffix - rx_buf + strlen(RESPONSE_SUFFIX);
             Serial.print(" X");
         }
