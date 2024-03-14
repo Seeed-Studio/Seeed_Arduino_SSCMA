@@ -35,16 +35,16 @@
 #define SSCMA_IIC_CLOCK 400000
 #endif
 #ifndef SSCMA_SPI_CLOCK
-#define SSCMA_SPI_CLOCK 12000000
+#define SSCMA_SPI_CLOCK 15000000
 #endif
 #ifndef SSCMA_MAX_RX_SIZE
-#define SSCMA_MAX_RX_SIZE 2 * 48 * 1024
+#define SSCMA_MAX_RX_SIZE 2 * 32 * 1024
 #endif
 #ifndef SSCMA_MAX_TX_SIZE
 #define SSCMA_MAX_TX_SIZE 1024
 #endif
 #ifndef SSCMA_MAX_PAYLOAD_SIZE
-#define SSCMA_MAX_PAYLOAD_SIZE 48 * 1024
+#define SSCMA_MAX_PAYLOAD_SIZE 32 * 1024
 #endif
 
 #include <stdint.h>
@@ -217,7 +217,8 @@ public:
                uint32_t wait_delay = 2, uint32_t clock = SSCMA_IIC_CLOCK);
     bool begin(HardwareSerial *serial, uint32_t baud = SSCMA_UART_BAUD,
                uint32_t wait_delay = 2);
-    bool begin(SPIClass *spi, int32_t cs = -1, int32_t sync = -1, uint32_t baud = SSCMA_SPI_CLOCK, uint32_t wait_delay = 1);
+    bool begin(SPIClass *spi, int32_t cs = -1, int32_t sync = -1, 
+               uint32_t baud = SSCMA_SPI_CLOCK, uint32_t wait_delay = 2);
     int invoke(int times = 1, bool filter = 0, bool show = 0);
     int available();
     int read(char *data, int length);
