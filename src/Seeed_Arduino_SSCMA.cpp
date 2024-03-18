@@ -27,7 +27,12 @@
 
 #include "Seeed_Arduino_SSCMA.h"
 
-#define SPI_CS(x) do { if(_cs >= 0) digitalWrite(_cs, x); } while(0)
+#define SPI_CS(x)                 \
+    do                            \
+    {                             \
+        if (_cs >= 0)             \
+            digitalWrite(_cs, x); \
+    } while (0)
 
 SSCMA::SSCMA()
 {
@@ -325,8 +330,9 @@ int SSCMA::spi_read(char *data, int length)
     int pl_len = 0;
     while (recv_len < length)
     {
-        if (_sync >= 0) {
-            if (digitalRead(_sync) == LOW) 
+        if (_sync >= 0)
+        {
+            if (digitalRead(_sync) == LOW)
                 return recv_len;
         }
         pl_len = length - recv_len;
@@ -466,8 +472,10 @@ int SSCMA::wait(int type, const char *cmd, uint32_t timeout)
     while (millis() - startTime <= timeout)
     {
         int len = available();
-        if (len == 0) continue;
-        if (len + rx_end > sizeof(rx_buf)) {
+        if (len == 0)
+            continue;
+        if (len + rx_end > sizeof(rx_buf))
+        {
             rx_end = 0;
         }
 
@@ -475,12 +483,14 @@ int SSCMA::wait(int type, const char *cmd, uint32_t timeout)
         rx_buf[rx_end] = '\0';
         rx_ofs = 0;
 
-        while (char *suffix = strnstr(rx_buf + rx_ofs, RESPONSE_SUFFIX, rx_end - rx_ofs)) {
+        while (char *suffix = strnstr(rx_buf + rx_ofs, RESPONSE_SUFFIX, rx_end - rx_ofs))
+        {
             if (char *prefix = strnstr(rx_buf + rx_ofs, RESPONSE_PREFIX, suffix - rx_buf - rx_ofs))
             {
                 // get json payload
                 len = suffix - prefix;
-                if (len > 4095) { // to long, don't parse
+                if (len > 4095)
+                { // to long, don't parse
                     rx_ofs += len + strlen(RESPONSE_SUFFIX);
                     continue;
                 }
@@ -532,11 +542,12 @@ int SSCMA::wait(int type, const char *cmd, uint32_t timeout)
 void SSCMA::fetch(ResponseCallback RespCallback)
 {
     int len = available();
-    if (len == 0) return;
-    if (len + rx_end >= sizeof(rx_buf)) {
+    if (len == 0)
+        return;
+    if (len + rx_end >= sizeof(rx_buf))
+    {
         rx_end = 0;
     }
-    Serial.printf("\n[%d] ->", len);
 
     rx_end += read(rx_buf + rx_end, len);
     rx_buf[rx_end] = '\0';
@@ -545,24 +556,27 @@ void SSCMA::fetch(ResponseCallback RespCallback)
     // extract each complete response
     while (char *suffix = strnstr(rx_buf + rx_ofs, RESPONSE_SUFFIX, rx_end - rx_ofs))
     {
-        if (char *prefix = strnstr(rx_buf + rx_ofs, RESPONSE_PREFIX, suffix - (rx_buf + rx_ofs))) {
+        if (char *prefix = strnstr(rx_buf + rx_ofs, RESPONSE_PREFIX, suffix - (rx_buf + rx_ofs)))
+        {
             len = suffix - prefix + strlen(RESPONSE_SUFFIX);
-            Serial.printf(" %d", len);
-            if (len < sizeof(payload)) {
+            if (len < sizeof(payload))
+            {
                 memcpy(payload, prefix, len);
                 payload[len] = '\0';
                 RespCallback(payload);
             }
-        } else {
+        }
+        else
+        {
             len = suffix - (rx_buf + rx_ofs) + strlen(RESPONSE_SUFFIX);
-            Serial.print(" X");
         }
         rx_ofs += len;
     }
     // Serial.printf("\naddr:0x%x, end:%d, ofs:%d\n", rx_buf, rx_end, rx_ofs);
 
     // move remaining data to the beginning of the buffer
-    if (rx_ofs > 0 && rx_ofs <= rx_end) {
+    if (rx_ofs > 0 && rx_ofs <= rx_end)
+    {
         memmove(rx_buf, rx_buf + rx_ofs, rx_end - rx_ofs);
         rx_end -= rx_ofs;
         rx_ofs = 0;
@@ -657,4 +671,24 @@ char *SSCMA::name(bool cache)
     }
 
     return NULL;
+}
+
+String SSCMA::info(bool cache)
+{
+    if (cache && _info.length())
+    {
+        return _info;
+    }
+
+    snprintf(tx_buf, sizeof(tx_buf), CMD_PREFIX "%s?" CMD_SUFFIX, CMD_AT_INFO);
+
+    write(tx_buf, strlen(tx_buf));
+
+    if (wait(CMD_TYPE_RESPONSE, CMD_AT_INFO, 3000) == CMD_OK)
+    {
+        _info = response["data"]["info"].as<String>();
+        return _info;
+    }
+
+    return "";
 }

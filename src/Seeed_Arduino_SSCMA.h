@@ -205,9 +205,15 @@ private:
 
     uint32_t rx_ofs = 0; // for rx_buf parse
     uint32_t rx_end = 0;
-    
-    JsonDocument response;    // for json response
+
+#if ARDUINOJSON_VERSION_MAJOR == 7
+    JsonDocument response; // for json response
+#else
+    StaticJsonDocument<2048> response; // for json response
+#endif
+
     String _image = "";
+    String _info = "";
 
 public:
     SSCMA();
@@ -217,7 +223,7 @@ public:
                uint32_t wait_delay = 2, uint32_t clock = SSCMA_IIC_CLOCK);
     bool begin(HardwareSerial *serial, uint32_t baud = SSCMA_UART_BAUD,
                uint32_t wait_delay = 2);
-    bool begin(SPIClass *spi, int32_t cs = -1, int32_t sync = -1, 
+    bool begin(SPIClass *spi, int32_t cs = -1, int32_t sync = -1,
                uint32_t baud = SSCMA_SPI_CLOCK, uint32_t wait_delay = 2);
     int invoke(int times = 1, bool filter = 0, bool show = 0);
     int available();
@@ -234,9 +240,10 @@ public:
 
     int WIFI(wifi_t &wifi);
     int MQTT(mqtt_t &mqtt);
-    
+
     char *ID(bool cache = true);
     char *name(bool cache = true);
+    String info(bool cache = true);
 
     String last_image() { return _image; }
 
