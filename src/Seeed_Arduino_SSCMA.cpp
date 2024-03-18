@@ -43,16 +43,28 @@ SSCMA::SSCMA()
 
 SSCMA::~SSCMA() {}
 
-bool SSCMA::begin(TwoWire *wire, uint16_t address, uint32_t wait_delay,
+bool SSCMA::begin(TwoWire *wire, uint16_t address, int32_t rst, uint32_t wait_delay,
                   uint32_t clock)
 {
+    _rst = rst;
     _wire = wire;
     _serial = NULL;
     _address = address;
     _wire->begin();
     _wire->setClock(clock);
     _wait_delay = wait_delay;
+
+    if (_rst >= 0)
+    {
+        pinMode(_rst, OUTPUT);
+        digitalWrite(_rst, LOW);
+        delay(50);
+        pinMode(_rst, INPUT);
+        delay(500);
+    }
+
     i2c_cmd(FEATURE_TRANSPORT, FEATURE_TRANSPORT_CMD_RESET);
+
     rx_ofs = 0;
     memset(rx_buf, 0, sizeof(rx_buf));
     memset(tx_buf, 0, sizeof(tx_buf));
@@ -63,7 +75,7 @@ bool SSCMA::begin(TwoWire *wire, uint16_t address, uint32_t wait_delay,
 }
 
 bool SSCMA::begin(HardwareSerial *serial, uint32_t baud,
-                  uint32_t wait_delay)
+                  int32_t rst, uint32_t wait_delay)
 {
     _serial = serial;
     _wire = NULL;
@@ -72,6 +84,15 @@ bool SSCMA::begin(HardwareSerial *serial, uint32_t baud,
     _serial->begin(_baud);
     _serial->setTimeout(1000);
     _serial->flush();
+
+    if (_rst >= 0)
+    {
+        pinMode(_rst, OUTPUT);
+        digitalWrite(_rst, LOW);
+        delay(50);
+        pinMode(_rst, INPUT);
+        delay(500);
+    }
 
     rx_ofs = 0;
     memset(rx_buf, 0, sizeof(rx_buf));
@@ -82,10 +103,11 @@ bool SSCMA::begin(HardwareSerial *serial, uint32_t baud,
     return ID(false) && name(false);
 }
 
-bool SSCMA::begin(SPIClass *spi, int32_t cs, int32_t sync, uint32_t baud, uint32_t wait_delay)
+bool SSCMA::begin(SPIClass *spi, int32_t cs, int32_t sync, uint32_t baud, int32_t rst, uint32_t wait_delay)
 {
     _spi = spi;
     _cs = cs;
+    _rst = rst;
     _sync = sync;
     _baud = baud;
     _wait_delay = wait_delay;
@@ -103,18 +125,32 @@ bool SSCMA::begin(SPIClass *spi, int32_t cs, int32_t sync, uint32_t baud, uint32
         pinMode(_sync, INPUT);
     }
 
+    if (_rst >= 0)
+    {
+        Serial.println("reset");
+        pinMode(_rst, OUTPUT);
+        digitalWrite(_rst, LOW);
+        delay(50);
+        pinMode(_rst, INPUT);
+        delay(500);
+    }
+
+    spi_cmd(FEATURE_TRANSPORT, FEATURE_TRANSPORT_CMD_RESET, 0, NULL);
+
     rx_ofs = 0;
     memset(rx_buf, 0, sizeof(rx_buf));
     memset(tx_buf, 0, sizeof(tx_buf));
     memset(payload, 0, sizeof(payload));
     response.clear();
 
-    return true;
+    return ID(false) && name(false);
 }
 
 int SSCMA::write(const char *data, int length)
 {
-    // Serial.print("write: ");
+    // Serial.print("write[");
+    // Serial.print(length);
+    // Serial.print("]: ");
     // Serial.write(data, length);
     if (_serial)
     {
@@ -476,8 +512,15 @@ int SSCMA::wait(int type, const char *cmd, uint32_t timeout)
             continue;
         if (len + rx_end > sizeof(rx_buf))
         {
-            rx_end = 0;
+            len = sizeof(rx_buf) - rx_end;
+            if (len == 0)
+            {
+                rx_end = 0;
+                continue;
+            }
         }
+        // Serial.print("available : ");
+        // Serial.println(len);
 
         rx_end += read(rx_buf + rx_end, len);
         rx_buf[rx_end] = '\0';
@@ -585,9 +628,10 @@ void SSCMA::fetch(ResponseCallback RespCallback)
 
 int SSCMA::invoke(int times, bool filter, bool show)
 {
-    snprintf(payload, sizeof(payload), CMD_PREFIX "%s=%d,%d,%d" CMD_SUFFIX,
+    char cmd[64] = {0};
+    snprintf(cmd, sizeof(cmd), CMD_PREFIX "%s=%d,%d,%d" CMD_SUFFIX,
              CMD_AT_INVOKE, times, filter, !show);
-    write(payload, strlen(payload));
+    write(cmd, strlen(cmd));
 
     if (wait(CMD_TYPE_RESPONSE, CMD_AT_INVOKE) == CMD_OK)
     {
@@ -602,11 +646,14 @@ int SSCMA::invoke(int times, bool filter, bool show)
 
 int SSCMA::WIFI(wifi_t &wifi)
 {
-    sprintf(payload, CMD_PREFIX "%s?" CMD_SUFFIX, CMD_AT_WIFI);
-    write(payload, strlen(payload));
+    char cmd[64] = {0};
+    snprintf(cmd, sizeof(cmd), CMD_PREFIX "%s?" CMD_SUFFIX, CMD_AT_WIFI);
+    write(cmd, strlen(cmd));
 
     if (wait(CMD_TYPE_RESPONSE, "WIFI?", 1000) == CMD_OK)
     {
+        wifi.status = response["data"]["status"];
+        wifi.security = response["data"]["config"]["security"];
         strcpy(wifi.ssid, response["data"]["config"]["name"]);
         strcpy(wifi.password, response["data"]["config"]["password"]);
         return CMD_OK;
@@ -617,11 +664,13 @@ int SSCMA::WIFI(wifi_t &wifi)
 
 int SSCMA::MQTT(mqtt_t &mqtt)
 {
-    sprintf(payload, CMD_PREFIX "%s?" CMD_SUFFIX, CMD_AT_MQTTSERVER);
-    write(payload, strlen(payload));
+    char cmd[64] = {0};
+    snprintf(cmd, sizeof(cmd), CMD_PREFIX "%s?" CMD_SUFFIX, CMD_AT_MQTTSERVER);
+    write(cmd, strlen(cmd));
 
     if (wait(CMD_TYPE_RESPONSE, "MQTTSERVER?", 1000) == CMD_OK)
     {
+        mqtt.status = response["data"]["status"];
         strcpy(mqtt.server, response["data"]["config"]["address"]);
         mqtt.port = response["data"]["config"]["port"];
         strcpy(mqtt.username, response["data"]["config"]["username"]);
@@ -640,10 +689,11 @@ char *SSCMA::ID(bool cache)
     {
         return _ID;
     }
+    char cmd[64] = {0};
 
-    snprintf(tx_buf, sizeof(tx_buf), CMD_PREFIX "%s" CMD_SUFFIX, CMD_AT_ID);
+    snprintf(cmd, sizeof(cmd), CMD_PREFIX "%s" CMD_SUFFIX, CMD_AT_ID);
 
-    write(tx_buf, strlen(tx_buf));
+    write(cmd, strlen(cmd));
 
     if (wait(CMD_TYPE_RESPONSE, CMD_AT_ID) == CMD_OK)
     {
@@ -659,10 +709,10 @@ char *SSCMA::name(bool cache)
     {
         return _name;
     }
+    char cmd[64] = {0};
+    snprintf(cmd, sizeof(cmd), CMD_PREFIX "%s" CMD_SUFFIX, CMD_AT_NAME);
 
-    snprintf(tx_buf, sizeof(tx_buf), CMD_PREFIX "%s" CMD_SUFFIX, CMD_AT_NAME);
-
-    write(tx_buf, strlen(tx_buf));
+    write(cmd, strlen(cmd));
 
     if (wait(CMD_TYPE_RESPONSE, CMD_AT_NAME, 3000) == CMD_OK)
     {
@@ -680,9 +730,11 @@ String SSCMA::info(bool cache)
         return _info;
     }
 
-    snprintf(tx_buf, sizeof(tx_buf), CMD_PREFIX "%s?" CMD_SUFFIX, CMD_AT_INFO);
+    char cmd[64] = {0};
 
-    write(tx_buf, strlen(tx_buf));
+    snprintf(cmd, sizeof(cmd), CMD_PREFIX "%s?" CMD_SUFFIX, CMD_AT_INFO);
+
+    write(cmd, strlen(cmd));
 
     if (wait(CMD_TYPE_RESPONSE, CMD_AT_INFO, 3000) == CMD_OK)
     {
@@ -691,4 +743,37 @@ String SSCMA::info(bool cache)
     }
 
     return "";
+}
+
+int SSCMA::WIFISTA(wifi_status_t &wifi_status)
+{
+    char cmd[128] = {0};
+    snprintf(cmd, sizeof(cmd), CMD_PREFIX "%s=%d" CMD_SUFFIX, CMD_AT_WIFI_STA, wifi_status.status);
+
+    write(cmd, strlen(cmd));
+
+    if (wait(CMD_TYPE_RESPONSE, CMD_AT_WIFI_STA) == CMD_OK)
+    {
+        snprintf(cmd, sizeof(cmd), CMD_PREFIX "%s=\"%s\",\"%s\",\"%s\"" CMD_SUFFIX, CMD_AT_WIFI_IN4, wifi_status.ipv4, wifi_status.netmask, wifi_status.gateway);
+        write(cmd, strlen(cmd));
+        if (wait(CMD_TYPE_RESPONSE, CMD_AT_WIFI_IN4) == CMD_OK)
+        {
+            return CMD_OK;
+        }
+    }
+    return CMD_ETIMEDOUT;
+}
+
+int SSCMA::MQTTSTA(mqtt_status_t &mqtt_status)
+{
+    char cmd[64] = {0};
+    snprintf(cmd, sizeof(cmd), CMD_PREFIX "%s=%d" CMD_SUFFIX, CMD_AT_MQTTSERVER_STA, mqtt_status.status);
+
+    write(cmd, strlen(cmd));
+    if (wait(CMD_TYPE_RESPONSE, CMD_AT_MQTTSERVER_STA) == CMD_OK)
+    {
+        return CMD_OK;
+    }
+
+    return CMD_ETIMEDOUT;
 }

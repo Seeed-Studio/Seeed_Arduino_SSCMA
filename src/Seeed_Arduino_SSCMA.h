@@ -41,7 +41,7 @@
 #define SSCMA_MAX_RX_SIZE 2 * 32 * 1024
 #endif
 #ifndef SSCMA_MAX_TX_SIZE
-#define SSCMA_MAX_TX_SIZE 1024
+#define SSCMA_MAX_TX_SIZE 2 * 1024
 #endif
 #ifndef SSCMA_MAX_PAYLOAD_SIZE
 #define SSCMA_MAX_PAYLOAD_SIZE 32 * 1024
@@ -93,7 +93,7 @@ const char CMD_AT_WIFI_IN4[] = "WIFIIN4";
 const char CMD_AT_WIFI_IN6[] = "WIFIIN6";
 const char CMD_AT_MQTTSERVER[] = "MQTTSERVER";
 const char CMD_AT_MQTTPUBSUB[] = "MQTTPUBSUB";
-const char CMD_AT_MQTTSTA[] = "MQTTSTA"; // mqtt status
+const char CMD_AT_MQTTSERVER_STA[] = "MQTTSERVERSTA"; // mqtt status
 const char CMD_AT_INVOKE[] = "INVOKE";
 const char CMD_AT_SAMPLE[] = "SAMPLE";
 const char CMD_AT_INFO[] = "INFO";
@@ -169,12 +169,24 @@ typedef struct
 
 typedef struct
 {
+    int status;
+    int security;
     char ssid[32];
     char password[32];
 } wifi_t;
 
 typedef struct
 {
+    int status;
+    char ipv4[16];
+    char ipv6[64];
+    char netmask[16];
+    char gateway[16];
+} wifi_status_t;
+
+typedef struct
+{
+    int status;
     char server[64];
     uint16_t port;
     char username[32];
@@ -182,6 +194,11 @@ typedef struct
     char client_id[32];
     bool use_ssl;
 } mqtt_t;
+
+typedef struct
+{
+    int status;
+} mqtt_status_t;
 
 class SSCMA
 {
@@ -191,6 +208,7 @@ private:
     SPIClass *_spi;
     int32_t _cs;
     int32_t _sync;
+    int32_t _rst;
     uint32_t _baud;
     uint16_t _address;
     int _wait_delay;
@@ -219,12 +237,12 @@ public:
     SSCMA();
     ~SSCMA();
 
-    bool begin(TwoWire *wire = &Wire, uint16_t address = I2C_ADDRESS,
+    bool begin(TwoWire *wire = &Wire, uint16_t address = I2C_ADDRESS, int32_t rst = -1,
                uint32_t wait_delay = 2, uint32_t clock = SSCMA_IIC_CLOCK);
-    bool begin(HardwareSerial *serial, uint32_t baud = SSCMA_UART_BAUD,
+    bool begin(HardwareSerial *serial, uint32_t baud = SSCMA_UART_BAUD, int32_t rst = -1,
                uint32_t wait_delay = 2);
     bool begin(SPIClass *spi, int32_t cs = -1, int32_t sync = -1,
-               uint32_t baud = SSCMA_SPI_CLOCK, uint32_t wait_delay = 2);
+               uint32_t baud = SSCMA_SPI_CLOCK, int32_t rst = -1, uint32_t wait_delay = 2);
     int invoke(int times = 1, bool filter = 0, bool show = 0);
     int available();
     int read(char *data, int length);
@@ -240,6 +258,9 @@ public:
 
     int WIFI(wifi_t &wifi);
     int MQTT(mqtt_t &mqtt);
+
+    int WIFISTA(wifi_status_t &wifi_status);
+    int MQTTSTA(mqtt_status_t &mqtt_status);
 
     char *ID(bool cache = true);
     char *name(bool cache = true);

@@ -6,6 +6,8 @@
 SSCMA AI;
 wifi_t wifi_config = {0};
 mqtt_t mqtt_config = {0};
+wifi_status_t wifi_status = {0};
+mqtt_status_t mqtt_status = {0};
 char topic[48] = {0};
 char cmd_buf[1024] = {0};
 
@@ -16,39 +18,41 @@ PubSubClient client(espClient);
 void setup()
 {
     Serial.begin(115200);
-    // while (!Serial) {
-    //   delay(1000);
+    // while (!Serial)
+    // {
+    //     delay(1000);
     // }
 
     SPI.begin(SCK, MOSI, MISO, -1);
-    AI.begin(&SPI, D1, D0, 15000000);
+    AI.begin(&SPI, D1, D0, 12000000, D3);
 
     setup_wifi();
-    client.setServer(mqtt_config.server, mqtt_config.port);
-    client.setCallback(mqtt_callback);
-    if (!client.setBufferSize(32 * 1024)) {while(1);}
+    if (!client.setBufferSize(32 * 1024))
+    {
+        while (1)
+            ;
+    }
 
     Serial.println("Proxy start");
 }
 
 void loop()
 {
-    if (!client.connected()) reconnect();
+    is_changed();
+    if (!client.connected())
+        reconnect();
     client.loop();
     AI.fetch(fetch_callback);
-
-    // if (int s_len = Serial.available()) {
-    //   AI.write(cmd_buf, Serial.readBytes(cmd_buf, s_len));
-    // }
-    // AI.fetch(proxy_callback);
 }
 
-void proxy_callback(const char* pl) {
-  Serial.write(pl, strlen(pl));
+void proxy_callback(const char *pl)
+{
+    Serial.write(pl, strlen(pl));
 }
 
-void fetch_callback(const char* pl) {
-  client.publish(topic, pl);
+void fetch_callback(const char *pl)
+{
+    client.publish(topic, pl);
 }
 
 void mqtt_callback(char *topic, byte *payload, unsigned int length)
@@ -60,14 +64,39 @@ void mqtt_callback(char *topic, byte *payload, unsigned int length)
 
 void setup_wifi()
 {
-    delay(2000); // wait AT ready
-
     count = 0;
-    Serial.println("Get WIFI config...");
-    while (CMD_OK != AI.WIFI(wifi_config)) {
+    Serial.println("Set WIFI status...");
+    while (CMD_OK != AI.WIFISTA(wifi_status))
+    {
         delay(10);
         count++;
-        if (count > 30) {
+        if (count > 10)
+        {
+            Serial.println("Failed, restart...");
+            ESP.restart();
+        }
+    }
+    count = 0;
+    Serial.println("Get WIFI config...");
+    while (CMD_OK != AI.WIFI(wifi_config))
+    {
+        delay(10);
+        count++;
+        if (count > 10)
+        {
+            Serial.println("Failed, restart...");
+            ESP.restart();
+        }
+    }
+
+    count = 0;
+    Serial.println("Set MQTT status...");
+    while (CMD_OK != AI.MQTTSTA(mqtt_status))
+    {
+        delay(10);
+        count++;
+        if (count > 10)
+        {
             Serial.println("Failed, restart...");
             ESP.restart();
         }
@@ -75,10 +104,12 @@ void setup_wifi()
 
     count = 0;
     Serial.println("Get MQTT config...");
-    while (CMD_OK != AI.MQTT(mqtt_config)) {
+    while (CMD_OK != AI.MQTT(mqtt_config))
+    {
         delay(10);
         count++;
-        if (count > 30) {
+        if (count > 10)
+        {
             Serial.println("Failed, restart...");
             ESP.restart();
         }
@@ -86,17 +117,19 @@ void setup_wifi()
     Serial.println();
     Serial.print("Client ID: ");
     Serial.println(mqtt_config.client_id);
-    
+
     Serial.println();
     Serial.print("Connecting to ");
     Serial.println(wifi_config.ssid);
 
     WiFi.begin(wifi_config.ssid, wifi_config.password);
     count = 0;
-    while (WiFi.status() != WL_CONNECTED) {
+    while (WiFi.status() != WL_CONNECTED)
+    {
         delay(100);
         count++;
-        if (count > 300) {
+        if (count > 100)
+        {
             Serial.println("Timeout, restart...");
             ESP.restart();
         }
@@ -107,10 +140,81 @@ void setup_wifi()
     Serial.println("");
     Serial.println("WiFi connected");
 
-    // Serial.println("IP address: ");
-    // Serial.println(WiFi.localIP());
-    // Serial.println(WiFi.subnetMask());
-    // Serial.println(WiFi.gatewayIP());
+    Serial.println("IP address: ");
+    Serial.println(WiFi.localIP());
+    Serial.println(WiFi.subnetMask());
+    Serial.println(WiFi.gatewayIP());
+    wifi_status.status = 2;
+    strcpy(wifi_status.ipv4, WiFi.localIP().toString().c_str());
+    strcpy(wifi_status.netmask, WiFi.subnetMask().toString().c_str());
+    strcpy(wifi_status.gateway, WiFi.gatewayIP().toString().c_str());
+    count = 0;
+    Serial.println("Set WIFI status...");
+    while (CMD_OK != AI.WIFISTA(wifi_status))
+    {
+        delay(10);
+        count++;
+        if (count > 10)
+        {
+            Serial.println("Failed, restart...");
+            ESP.restart();
+        }
+    }
+
+    client.setServer(mqtt_config.server, mqtt_config.port);
+    client.setCallback(mqtt_callback);
+}
+
+void is_changed()
+{
+    static uint32_t time_count = millis();
+    if (millis() - time_count < 2000) // check every 5s
+    {
+        return;
+    }
+    else
+    {
+        time_count = millis();
+    }
+    count = 0;
+    Serial.println("Get WIFI config...");
+    wifi_t _wifi_config;
+    while (CMD_OK != AI.WIFI(_wifi_config))
+    {
+        delay(10);
+        count++;
+        if (count > 10)
+        {
+            Serial.println("Failed, restart...");
+            ESP.restart();
+        }
+    }
+
+    if (_wifi_config.status != wifi_config.status || _wifi_config.security != wifi_config.security || strcmp(_wifi_config.ssid, wifi_config.ssid) != 0 || strcmp(_wifi_config.password, wifi_config.password) != 0)
+    {
+        Serial.println("WIFI config changed, restart...");
+        ESP.restart();
+    }
+
+    count = 0;
+    Serial.println("Get MQTT config...");
+    mqtt_t _mqtt_config;
+    while (CMD_OK != AI.MQTT(_mqtt_config))
+    {
+        delay(10);
+        count++;
+        if (count > 10)
+        {
+            Serial.println("Failed, restart...");
+            ESP.restart();
+        }
+    }
+
+    if (_mqtt_config.status != mqtt_config.status || _mqtt_config.username != mqtt_config.username || _mqtt_config.password != mqtt_config.password || strcmp(_mqtt_config.client_id, mqtt_config.client_id) != 0)
+    {
+        Serial.println("MQTT config changed, restart...");
+        ESP.restart();
+    }
 }
 
 void reconnect()
@@ -119,25 +223,33 @@ void reconnect()
     while (!client.connected())
     {
         Serial.print("Connecting MQTT...");
-        if (client.connect(mqtt_config.client_id, mqtt_config.username, mqtt_config.password)) {
+        if (client.connect(mqtt_config.client_id, mqtt_config.username, mqtt_config.password))
+        {
             count = 0;
             snprintf(topic, sizeof(topic), "sscma/v0/%s/rx", mqtt_config.client_id);
             Serial.println("connected");
-            client.publish("sscma/v0/discovery", "mqtt2spi");
+            snprintf(cmd_buf, sizeof(cmd_buf), "{\"client_id\":\"%s\"}", mqtt_config.client_id);
+            client.publish("sscma/v0/discovery", cmd_buf);
             client.subscribe(topic);
             snprintf(topic, sizeof(topic), "sscma/v0/%s/tx", mqtt_config.client_id);
-        } else {
+            mqtt_status.status = 2;
+            AI.MQTTSTA(mqtt_status);
+        }
+        else
+        {
+            mqtt_status.status = 0;
+            AI.MQTTSTA(mqtt_status);
             Serial.print("failed, rc=");
             Serial.print(client.state());
             Serial.println(" try again in 1 seconds");
             // Wait 1 seconds before retrying
             delay(1000);
             count++;
-            if (count > 5) {
+            if (count > 5)
+            {
                 Serial.println("Timeout, restart...");
                 ESP.restart();
             }
         }
     }
 }
-
