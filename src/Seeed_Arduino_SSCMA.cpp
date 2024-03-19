@@ -36,14 +36,21 @@
 
 SSCMA::SSCMA()
 {
-    _wire = &Wire;
+    _wire = NULL;
+    _spi = NULL;
+    _serial = NULL;
     _address = I2C_ADDRESS;
     _wait_delay = 2;
+    _rst = -1;
+    _cs = -1;
+    _sync = -1;
+    tx_len = 0;
+    rx_len = 0;
 }
 
 SSCMA::~SSCMA() {}
 
-bool SSCMA::begin(TwoWire *wire, uint16_t address, int32_t rst, uint32_t wait_delay,
+bool SSCMA::begin(TwoWire *wire, int32_t rst, uint16_t address, uint32_t wait_delay,
                   uint32_t clock)
 {
     _rst = rst;
@@ -54,6 +61,11 @@ bool SSCMA::begin(TwoWire *wire, uint16_t address, int32_t rst, uint32_t wait_de
     _wire->setClock(clock);
     _wait_delay = wait_delay;
 
+    set_rx_buffer(SSCMA_MAX_RX_SIZE);
+    set_tx_buffer(SSCMA_MAX_TX_SIZE);
+
+    response.clear();
+
     if (_rst >= 0)
     {
         pinMode(_rst, OUTPUT);
@@ -63,19 +75,11 @@ bool SSCMA::begin(TwoWire *wire, uint16_t address, int32_t rst, uint32_t wait_de
         delay(500);
     }
 
-    i2c_cmd(FEATURE_TRANSPORT, FEATURE_TRANSPORT_CMD_RESET);
-
-    rx_ofs = 0;
-    memset(rx_buf, 0, sizeof(rx_buf));
-    memset(tx_buf, 0, sizeof(tx_buf));
-    memset(payload, 0, sizeof(payload));
-    response.clear();
-
     return ID(false) && name(false);
 }
 
-bool SSCMA::begin(HardwareSerial *serial, uint32_t baud,
-                  int32_t rst, uint32_t wait_delay)
+bool SSCMA::begin(HardwareSerial *serial, int32_t rst, uint32_t baud,
+                  uint32_t wait_delay)
 {
     _serial = serial;
     _wire = NULL;
@@ -85,6 +89,11 @@ bool SSCMA::begin(HardwareSerial *serial, uint32_t baud,
     _serial->setTimeout(1000);
     _serial->flush();
 
+    set_rx_buffer(SSCMA_MAX_RX_SIZE);
+    set_tx_buffer(SSCMA_MAX_TX_SIZE);
+
+    response.clear();
+
     if (_rst >= 0)
     {
         pinMode(_rst, OUTPUT);
@@ -94,16 +103,10 @@ bool SSCMA::begin(HardwareSerial *serial, uint32_t baud,
         delay(500);
     }
 
-    rx_ofs = 0;
-    memset(rx_buf, 0, sizeof(rx_buf));
-    memset(tx_buf, 0, sizeof(tx_buf));
-    memset(payload, 0, sizeof(payload));
-    response.clear();
-
     return ID(false) && name(false);
 }
 
-bool SSCMA::begin(SPIClass *spi, int32_t cs, int32_t sync, uint32_t baud, int32_t rst, uint32_t wait_delay)
+bool SSCMA::begin(SPIClass *spi, int32_t cs, int32_t sync, int32_t rst, uint32_t baud, uint32_t wait_delay)
 {
     _spi = spi;
     _cs = cs;
@@ -125,9 +128,13 @@ bool SSCMA::begin(SPIClass *spi, int32_t cs, int32_t sync, uint32_t baud, int32_
         pinMode(_sync, INPUT);
     }
 
+    set_rx_buffer(SSCMA_MAX_RX_SIZE);
+    set_tx_buffer(SSCMA_MAX_TX_SIZE);
+
+    response.clear();
+
     if (_rst >= 0)
     {
-        Serial.println("reset");
         pinMode(_rst, OUTPUT);
         digitalWrite(_rst, LOW);
         delay(50);
@@ -136,12 +143,6 @@ bool SSCMA::begin(SPIClass *spi, int32_t cs, int32_t sync, uint32_t baud, int32_
     }
 
     spi_cmd(FEATURE_TRANSPORT, FEATURE_TRANSPORT_CMD_RESET, 0, NULL);
-
-    rx_ofs = 0;
-    memset(rx_buf, 0, sizeof(rx_buf));
-    memset(tx_buf, 0, sizeof(tx_buf));
-    memset(payload, 0, sizeof(payload));
-    response.clear();
 
     return ID(false) && name(false);
 }
@@ -342,7 +343,7 @@ void SSCMA::spi_cmd(uint8_t feature, uint8_t cmd, uint16_t len, uint8_t *data)
 
 int SSCMA::spi_available()
 {
-    uint16_t size;
+    uint32_t size;
 
     if (_sync >= 0)
     {
@@ -510,10 +511,10 @@ int SSCMA::wait(int type, const char *cmd, uint32_t timeout)
         int len = available();
         if (len == 0)
             continue;
-        if (len + rx_end > sizeof(rx_buf))
+        if (len + rx_end > this->rx_len)
         {
-            len = sizeof(rx_buf) - rx_end;
-            if (len == 0)
+            len = this->rx_len - rx_end;
+            if (len <= 0)
             {
                 rx_end = 0;
                 continue;
@@ -524,30 +525,31 @@ int SSCMA::wait(int type, const char *cmd, uint32_t timeout)
 
         rx_end += read(rx_buf + rx_end, len);
         rx_buf[rx_end] = '\0';
-        rx_ofs = 0;
 
-        while (char *suffix = strnstr(rx_buf + rx_ofs, RESPONSE_SUFFIX, rx_end - rx_ofs))
+        while (char *suffix = strnstr(rx_buf, RESPONSE_SUFFIX, rx_end))
         {
-            if (char *prefix = strnstr(rx_buf + rx_ofs, RESPONSE_PREFIX, suffix - rx_buf - rx_ofs))
+            if (char *prefix = strnstr(rx_buf, RESPONSE_PREFIX, suffix - rx_buf))
             {
                 // get json payload
-                len = suffix - prefix;
-                if (len > 4095)
-                { // to long, don't parse
-                    rx_ofs += len + strlen(RESPONSE_SUFFIX);
+                len = suffix - prefix + RESPONSE_SUFFIX_LEN;
+                payload = (char *)malloc(len);
+
+                if (!payload)
+                {
                     continue;
                 }
 
-                memcpy(payload, prefix + 1, len);
-                payload[len] = '\0';
+                memcpy(payload, prefix + 1, len - 1); // remove "\r" and "\n"
+                memmove(rx_buf, suffix + RESPONSE_SUFFIX_LEN, rx_end - (suffix - rx_buf) - RESPONSE_SUFFIX_LEN);
+                rx_end -= suffix - rx_buf + RESPONSE_SUFFIX_LEN;
+                payload[len - 1] = '\0';
                 // Serial.printf("\npayload :%s", payload);
                 // parse json response
                 response.clear();
                 DeserializationError error = deserializeJson(response, payload);
+                free(payload);
                 if (error)
                 {
-                    // Serial.print(F("deserializeJson() failed: "));
-                    // Serial.println(error.c_str());
                     continue;
                 }
 
@@ -570,13 +572,12 @@ int SSCMA::wait(int type, const char *cmd, uint32_t timeout)
             }
             else
             {
-                len = suffix - rx_buf;
+                // discard this reply
+                memmove(rx_buf, suffix + RESPONSE_PREFIX_LEN, rx_end - (suffix - rx_buf) - RESPONSE_PREFIX_LEN);
+                rx_end -= suffix - rx_buf + RESPONSE_PREFIX_LEN;
+                rx_buf[rx_end] = '\0';
             }
-            rx_ofs += len + strlen(RESPONSE_SUFFIX);
         }
-        memmove(rx_buf, rx_buf + rx_ofs, rx_end - rx_ofs);
-        rx_end -= rx_ofs;
-        rx_ofs = 0;
     }
 
     return CMD_ETIMEDOUT;
@@ -587,42 +588,49 @@ void SSCMA::fetch(ResponseCallback RespCallback)
     int len = available();
     if (len == 0)
         return;
-    if (len + rx_end >= sizeof(rx_buf))
+    if (len + rx_end > this->rx_len)
     {
-        rx_end = 0;
+        len = this->rx_len - rx_end;
+        if (len <= 0)
+        {
+            rx_end = 0;
+            return;
+        }
     }
+    // Serial.print("available : ");
+    // Serial.println(len);
 
     rx_end += read(rx_buf + rx_end, len);
     rx_buf[rx_end] = '\0';
-    rx_ofs = 0;
 
-    // extract each complete response
-    while (char *suffix = strnstr(rx_buf + rx_ofs, RESPONSE_SUFFIX, rx_end - rx_ofs))
+    while (char *suffix = strnstr(rx_buf, RESPONSE_SUFFIX, rx_end))
     {
-        if (char *prefix = strnstr(rx_buf + rx_ofs, RESPONSE_PREFIX, suffix - (rx_buf + rx_ofs)))
+        if (char *prefix = strnstr(rx_buf, RESPONSE_PREFIX, suffix - rx_buf))
         {
-            len = suffix - prefix + strlen(RESPONSE_SUFFIX);
-            if (len < sizeof(payload))
+            // get json payload
+            len = suffix - prefix + RESPONSE_SUFFIX_LEN;
+            payload = (char *)malloc(len + 1);
+
+            if (!payload)
             {
-                memcpy(payload, prefix, len);
-                payload[len] = '\0';
-                RespCallback(payload);
+                continue;
             }
+
+            memcpy(payload, prefix, len); // remove "\r" and "\n"
+            memmove(rx_buf, suffix + RESPONSE_SUFFIX_LEN, rx_end - (suffix - rx_buf) - RESPONSE_SUFFIX_LEN);
+            rx_end -= suffix - rx_buf + RESPONSE_SUFFIX_LEN;
+            payload[len] = '\0';
+            if (RespCallback)
+                RespCallback(payload, len);
+            free(payload);
         }
         else
         {
-            len = suffix - (rx_buf + rx_ofs) + strlen(RESPONSE_SUFFIX);
+            // discard this reply
+            memmove(rx_buf, suffix + RESPONSE_PREFIX_LEN, rx_end - (suffix - rx_buf) - RESPONSE_PREFIX_LEN);
+            rx_end -= suffix - rx_buf + RESPONSE_PREFIX_LEN;
+            rx_buf[rx_end] = '\0';
         }
-        rx_ofs += len;
-    }
-    // Serial.printf("\naddr:0x%x, end:%d, ofs:%d\n", rx_buf, rx_end, rx_ofs);
-
-    // move remaining data to the beginning of the buffer
-    if (rx_ofs > 0 && rx_ofs <= rx_end)
-    {
-        memmove(rx_buf, rx_buf + rx_ofs, rx_end - rx_ofs);
-        rx_end -= rx_ofs;
-        rx_ofs = 0;
     }
 }
 
@@ -776,4 +784,46 @@ int SSCMA::MQTTSTA(mqtt_status_t &mqtt_status)
     }
 
     return CMD_ETIMEDOUT;
+}
+
+bool SSCMA::set_rx_buffer(uint32_t size)
+{
+    if (size == 0)
+    {
+        return false;
+    }
+    if (this->rx_len == 0)
+    {
+        this->rx_buf = (char *)malloc(size);
+    }
+    else
+    {
+        this->rx_buf = (char *)realloc(this->rx_buf, size);
+    }
+    if (this->rx_buf)
+    {
+        this->rx_end = 0;
+        this->rx_len = size;
+    }
+    return this->rx_buf != NULL;
+}
+bool SSCMA::set_tx_buffer(uint32_t size)
+{
+    if (size == 0)
+    {
+        return false;
+    }
+    if (this->tx_len == 0)
+    {
+        this->tx_buf = (char *)malloc(size);
+    }
+    else
+    {
+        this->tx_buf = (char *)realloc(this->tx_buf, size);
+    }
+    if (this->tx_buf)
+    {
+        this->tx_len = size;
+    }
+    return this->tx_len != NULL;
 }

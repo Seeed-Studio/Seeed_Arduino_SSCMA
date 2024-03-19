@@ -3,6 +3,16 @@
 #include <PubSubClient.h>
 #include <Seeed_Arduino_SSCMA.h>
 
+#ifdef ESP32
+#include <HardwareSerial.h>
+
+// Define two Serial devices mapped to the two internal UARTs
+HardwareSerial atSerial(0);
+
+#else
+#define atSerial Serial1
+#endif
+
 SSCMA AI;
 wifi_t wifi_config = {0};
 mqtt_t mqtt_config = {0};
@@ -23,8 +33,12 @@ void setup()
     //     delay(1000);
     // }
 
-    SPI.begin(SCK, MOSI, MISO, -1);
-    AI.begin(&SPI, D1, D0, D3, 15000000);
+    // you should increase the buffer size if you have more than 32K for Serial
+#ifdef ESP32
+    atSerial.setRxBufferSize(32 * 1024);
+#endif
+
+    AI.begin(&atSerial, D3);
 
     setup_wifi();
     if (!client.setBufferSize(32 * 1024))

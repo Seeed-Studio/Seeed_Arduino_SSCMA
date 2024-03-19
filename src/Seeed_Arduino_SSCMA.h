@@ -74,6 +74,9 @@
 #define RESPONSE_PREFIX "\r{"
 #define RESPONSE_SUFFIX "}\n"
 
+#define RESPONSE_PREFIX_LEN (sizeof(RESPONSE_PREFIX) - 1)
+#define RESPONSE_SUFFIX_LEN (sizeof(RESPONSE_SUFFIX) - 1)
+
 #define CMD_PREFIX "AT+"
 #define CMD_SUFFIX "\r\n"
 
@@ -127,7 +130,7 @@ const char EVENT_SUPERVISOR[] = "SUPERVISOR";
 const char LOG_AT[] = "AT";
 const char LOG_LOG[] = "LOG";
 
-typedef std::function<void(const char *resp)> ResponseCallback;
+typedef std::function<void(const char *resp, size_t len)> ResponseCallback;
 
 typedef struct
 {
@@ -221,7 +224,6 @@ private:
     char _name[32] = {0};
     char _ID[32] = {0};
 
-    uint32_t rx_ofs = 0; // for rx_buf parse
     uint32_t rx_end = 0;
 
 #if ARDUINOJSON_VERSION_MAJOR == 7
@@ -233,16 +235,22 @@ private:
     String _image = "";
     String _info = "";
 
+    char *tx_buf; // for cmd
+    uint32_t tx_len;
+    char *rx_buf; // for response
+    uint32_t rx_len;
+    char *payload; // for json payload
+
 public:
     SSCMA();
     ~SSCMA();
 
-    bool begin(TwoWire *wire = &Wire, uint16_t address = I2C_ADDRESS, int32_t rst = -1,
+    bool begin(TwoWire *wire = &Wire, int32_t rst = -1, uint16_t address = I2C_ADDRESS,
                uint32_t wait_delay = 2, uint32_t clock = SSCMA_IIC_CLOCK);
-    bool begin(HardwareSerial *serial, uint32_t baud = SSCMA_UART_BAUD, int32_t rst = -1,
+    bool begin(HardwareSerial *serial, int32_t rst = -1, uint32_t baud = SSCMA_UART_BAUD,
                uint32_t wait_delay = 2);
-    bool begin(SPIClass *spi, int32_t cs = -1, int32_t sync = -1,
-               uint32_t baud = SSCMA_SPI_CLOCK, int32_t rst = -1, uint32_t wait_delay = 2);
+    bool begin(SPIClass *spi, int32_t cs = -1, int32_t sync = -1, int32_t rst = -1,
+               uint32_t baud = SSCMA_SPI_CLOCK, uint32_t wait_delay = 2);
     int invoke(int times = 1, bool filter = 0, bool show = 0);
     int available();
     int read(char *data, int length);
@@ -268,9 +276,8 @@ public:
 
     String last_image() { return _image; }
 
-    char tx_buf[SSCMA_MAX_TX_SIZE];       // for cmd
-    char rx_buf[SSCMA_MAX_RX_SIZE];       // for response
-    char payload[SSCMA_MAX_PAYLOAD_SIZE]; // for json payload
+    bool set_rx_buffer(uint32_t size);
+    bool set_tx_buffer(uint32_t size);
 
 private:
     int i2c_write(const char *data, int length);
@@ -283,7 +290,7 @@ private:
     int spi_available();
     void spi_cmd(uint8_t feature, uint8_t cmd, uint16_t len = 0, uint8_t *data = NULL);
 
-    int wait(int type, const char *cmd, uint32_t timeout = 3000);
+    int wait(int type, const char *cmd, uint32_t timeout = 1000);
     void praser_event();
     void praser_log();
 };

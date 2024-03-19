@@ -34,8 +34,7 @@ void loop()
             t_len = sizeof(buf);
         }
         AI.read(buf, t_len);
-        // Serial.write(buf, t_len);
-        Serial.write(buf, 80);
+        Serial.write(buf, t_len);
         Serial.flush();
     }
 }
