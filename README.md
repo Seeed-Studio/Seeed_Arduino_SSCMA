@@ -4,7 +4,7 @@ The Seeed_Arduino_SSCMA library is designed to enable Arduino hosts to communica
 
 ## Installation
 
-1. Download the latest version of the Seeed_Arduino_SSCMA library from the [GitHub repository](https://github.com/your_repository_link).
+1. Download the latest version of the Seeed_Arduino_SSCMA library from the [GitHub repository](https://github.com/seeed-studio/Seeed_Arduino_SSCMA).
 2. Add the library to your Arduino IDE by selecting **Sketch > Include Library > Add .ZIP Library** and choosing the downloaded file.
 
 ## Usage
