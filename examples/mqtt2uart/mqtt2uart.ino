@@ -13,6 +13,12 @@ HardwareSerial atSerial(0);
 #define atSerial Serial1
 #endif
 
+#ifdef ARDUINO_XIAO_ESP32C3
+#define WIFI_VERSION "xiao_esp32c3:1.0.0"
+#elif defined(ARDUINO_XIAO_ESP32S3)
+#define WIFI_VERSION "xiao_esp32s3:1.0.0"
+#endif
+
 SSCMA AI;
 wifi_t wifi_config = {0};
 mqtt_t mqtt_config = {0};
@@ -66,21 +72,34 @@ void proxy_callback(const char *pl)
 
 void fetch_callback(const char *pl, size_t len)
 {
-    Serial.print("-> ");
-    Serial.println(len);
+    // Serial.print("-> ");
+    // Serial.println(len);
     client.publish(topic, pl);
 }
 
 void mqtt_callback(char *topic, byte *payload, unsigned int length)
 {
     AI.write((char *)payload, length);
-    Serial.print("<- ");
-    Serial.println(length);
+    // Serial.print("<- ");
+    // Serial.println(length);
 }
 
 void setup_wifi()
 {
     count = 0;
+#ifdef WIFI_VERSION
+    Serial.println("Set WIFI version...");
+    while (CMD_OK != AI.WIFIVER(WIFI_VERSION))
+    {
+        delay(10);
+        count++;
+        if (count > 10)
+        {
+            Serial.println("Failed, restart...");
+            ESP.restart();
+        }
+    }
+#endif
     Serial.println("Set WIFI status...");
     while (CMD_OK != AI.WIFISTA(wifi_status))
     {

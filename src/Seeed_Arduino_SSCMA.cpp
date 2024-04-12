@@ -786,6 +786,20 @@ int SSCMA::MQTTSTA(mqtt_status_t &mqtt_status)
     return CMD_ETIMEDOUT;
 }
 
+int SSCMA::WIFIVER(char *version)
+{
+    char cmd[64] = {0};
+    snprintf(cmd, sizeof(cmd), CMD_PREFIX "%s=\"%s\"" CMD_SUFFIX, CMD_AT_WIFI_VER, version);
+
+    write(cmd, strlen(cmd));
+    if (wait(CMD_TYPE_RESPONSE, CMD_AT_WIFI_VER) == CMD_OK)
+    {
+        return CMD_OK;
+    }
+
+    return CMD_ETIMEDOUT;
+}
+
 bool SSCMA::set_rx_buffer(uint32_t size)
 {
     if (size == 0)

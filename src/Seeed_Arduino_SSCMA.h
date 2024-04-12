@@ -91,6 +91,7 @@ const char CMD_AT_STATS[] = "STAT";
 const char CMD_AT_BREAK[] = "BREAK";
 const char CMD_AT_RESET[] = "RST";
 const char CMD_AT_WIFI[] = "WIFI";
+const char CMD_AT_WIFI_VER[] = "WIFIVER"; // wifi version
 const char CMD_AT_WIFI_STA[] = "WIFISTA"; // wifi status
 const char CMD_AT_WIFI_IN4[] = "WIFIIN4";
 const char CMD_AT_WIFI_IN6[] = "WIFIIN6";
@@ -264,11 +265,14 @@ public:
     std::vector<point_t> &points() { return _points; }
     std::vector<keypoints_t> &keypoints() { return _keypoints; }
 
+    int WIFIVER(char *version);
+
     int WIFI(wifi_t &wifi);
     int MQTT(mqtt_t &mqtt);
 
     int WIFISTA(wifi_status_t &wifi_status);
     int MQTTSTA(mqtt_status_t &mqtt_status);
+
 
     char *ID(bool cache = true);
     char *name(bool cache = true);
