@@ -679,11 +679,11 @@ int SSCMA::MQTT(mqtt_t &mqtt)
     if (wait(CMD_TYPE_RESPONSE, "MQTTSERVER?", 1000) == CMD_OK)
     {
         mqtt.status = response["data"]["status"];
-        strcpy(mqtt.server, response["data"]["config"]["address"]);
         mqtt.port = response["data"]["config"]["port"];
+        mqtt.use_ssl = response["data"]["config"]["use_ssl"] == 1;
+        strcpy(mqtt.server, response["data"]["config"]["address"]);
         strcpy(mqtt.username, response["data"]["config"]["username"]);
         strcpy(mqtt.password, response["data"]["config"]["password"]);
-        mqtt.use_ssl = response["data"]["config"]["use_ssl"] == 1;
         strcpy(mqtt.client_id, response["data"]["config"]["client_id"]);
         return CMD_OK;
     }
@@ -840,4 +840,16 @@ bool SSCMA::set_tx_buffer(uint32_t size)
         this->tx_len = size;
     }
     return this->tx_len != NULL;
+}
+
+bool SSCMA::save_jpeg()
+{
+    char cmd[64] = {0};
+    snprintf(cmd, sizeof(cmd), CMD_PREFIX "%s=\"save_jpeg()\"" CMD_SUFFIX, CMD_AT_ACTION);
+
+    write(cmd, strlen(cmd));
+    if (wait(CMD_TYPE_RESPONSE, CMD_AT_ACTION) == CMD_OK)
+    {
+        return CMD_OK;
+    }
 }

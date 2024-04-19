@@ -107,8 +107,10 @@ const char CMD_AT_ALGOS[] = "ALGOS";
 const char CMD_AT_MODELS[] = "MODELS";
 const char CMD_AT_MODEL[] = "MODEL";
 const char CMD_AT_SENSORS[] = "SENSORS";
-const char COMMADN_AT_ACTION[] = "ACTION";
-const char CMD_AT_LED[] = "LED";
+const char CMD_AT_ACTION[] = "ACTION";
+const char CMD_AT_LED[] = "led";
+const char CMD_AT_SAVE_JPEG[] = "save_jpeg()";
+
 
 #define CMD_OK 0
 #define CMD_AGAIN 1
@@ -175,8 +177,8 @@ typedef struct
 {
     int status;
     int security;
-    char ssid[32];
-    char password[32];
+    char ssid[64];
+    char password[64];
 } wifi_t;
 
 typedef struct
@@ -191,12 +193,12 @@ typedef struct
 typedef struct
 {
     int status;
-    char server[64];
     uint16_t port;
-    char username[32];
-    char password[32];
-    char client_id[32];
     bool use_ssl;
+    char server[128];
+    char username[128];
+    char password[128];
+    char client_id[128];
 } mqtt_t;
 
 typedef struct
@@ -273,10 +275,11 @@ public:
     int WIFISTA(wifi_status_t &wifi_status);
     int MQTTSTA(mqtt_status_t &mqtt_status);
 
-
     char *ID(bool cache = true);
     char *name(bool cache = true);
     String info(bool cache = true);
+
+    bool save_jpeg();
 
     String last_image() { return _image; }
 
