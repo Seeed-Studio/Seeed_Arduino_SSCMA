@@ -279,6 +279,8 @@ public:
     char *name(bool cache = true);
     String info(bool cache = true);
 
+    // actions
+    bool clean_actions();
     bool save_jpeg();
 
     String last_image() { return _image; }
