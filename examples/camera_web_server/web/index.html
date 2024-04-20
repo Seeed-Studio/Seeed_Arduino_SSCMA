@@ -1,115 +1,154 @@
 <!DOCTYPE html>
 <html>
 
-    <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width,initial-scale=1" />
-        <title>Grove Vision AI</title>
-        <style>
-            body {
-                font-family: Arial, Helvetica, sans-serif;
-                background: #181818;
-                color: #efefef;
-                font-size: 16px;
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Grove Vision AI</title>
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background: #181818;
+            color: #efefef;
+            font-size: 16px;
+        }
+
+        h2 {
+            font-size: 18px;
+        }
+
+        section.main {
+            display: flex;
+        }
+
+        @keyframes pullDown {
+            0% {
+                transform: translateY(-100%);
+                opacity: 0;
             }
 
-            h2 {
-                font-size: 18px;
+            50% {
+                transform: translateY(-5%);
+                opacity: 0.0;
             }
 
-            section.main {
-                display: flex;
+            100% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            0% {
+                transform: translateY(0);
+                opacity: 1;
             }
 
-            @keyframes pullDown {
-                0% {
-                    transform: translateY(-100%);
-                    opacity: 0;
-                }
-
-                50% {
-                    transform: translateY(-5%);
-                    opacity: 0.0;
-                }
-
-                100% {
-                    transform: translateY(0);
-                    opacity: 1;
-                }
+            50% {
+                transform: translateY(-5%);
+                opacity: 0.0;
             }
 
-            @keyframes slideUp {
-                0% {
-                    transform: translateY(0);
-                    opacity: 1;
-                }
-
-                50% {
-                    transform: translateY(-5%);
-                    opacity: 0.0;
-                }
-
-                90% {
-                    transform: translateY(-100%);
-                    opacity: 0;
-                }
-
-                100% {
-                    transform: translateY(0%);
-                    opacity: 0;
-                }
+            90% {
+                transform: translateY(-100%);
+                opacity: 0;
             }
 
-            @keyframes loading {
-                0% {
-                    background-position: 150% 0;
-                }
+            100% {
+                transform: translateY(0%);
+                opacity: 0;
+            }
+        }
 
-                100% {
-                    background-position: -50% 0;
-                }
+        @keyframes loading {
+            0% {
+                background-position: 150% 0;
             }
 
-            #toggle-stream.loading {
-                pointer-events: none;
-                -webkit-user-select: none;
-                user-select: none;
-                background: linear-gradient(90deg, #ff3034 50%, #ffffff 80%, #ff3034 50%);
-                background-size: 200% 100%;
-                animation: loading 2s linear infinite;
+            100% {
+                background-position: -50% 0;
             }
+        }
 
-            #menu,
-            section.main {
-                flex-direction: column;
-            }
+        #toggle-stream.loading {
+            pointer-events: none;
+            -webkit-user-select: none;
+            user-select: none;
+            background: linear-gradient(90deg, #ff3034 50%, #ffffff 80%, #ff3034 50%);
+            background-size: 200% 100%;
+            animation: loading 2s linear infinite;
+        }
 
-            #menu {
-                display: none;
-                flex-wrap: nowrap;
-                min-width: 340px;
-                background: #363636;
-                padding: 8px;
-                border-radius: 4px;
-                margin-top: -10px;
-            }
+        #menu,
+        section.main {
+            flex-direction: column;
+        }
 
+        #menu {
+            display: none;
+            flex-wrap: nowrap;
+            min-width: 340px;
+            background: #363636;
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: -10px;
+        }
+
+        #content {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: stretch;
+            flex-direction: column;
+        }
+
+        div.text {
+            width: 100%;
+            max-width: 120px;
+            margin: 0;
+            padding: 0;
+        }
+
+        figure {
+            padding: 0px;
+            margin: 0;
+            -webkit-margin-before: 0;
+            margin-block-start: 0;
+            -webkit-margin-after: 0;
+            margin-block-end: 0;
+            -webkit-margin-start: 0;
+            margin-inline-start: 0;
+            -webkit-margin-end: 0;
+            margin-inline-end: 0;
+        }
+
+        figure img {
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            width: 100%;
+            height: auto;
+            border-radius: 4px;
+            margin-top: 8px;
+        }
+
+        @media (min-width: 800px) and (orientation: landscape) {
             #content {
                 display: flex;
-                flex-wrap: wrap;
+                flex-wrap: nowrap;
                 align-items: stretch;
-                flex-direction: column;
+                flex-direction: row;
             }
 
-            div.text {
-                width: 100%;
-                max-width: 120px;
-                margin: 0;
-                padding: 0;
+            figure img {
+                display: block;
+                max-width: 100%;
+                max-height: calc(100vh - 40px);
+                width: auto;
+                height: auto;
             }
 
             figure {
-                padding: 0px;
+                padding: 0 0 0 0px;
                 margin: 0;
                 -webkit-margin-before: 0;
                 margin-block-start: 0;
@@ -119,688 +158,794 @@
                 margin-inline-start: 0;
                 -webkit-margin-end: 0;
                 margin-inline-end: 0;
-            }
-
-            figure img {
-                display: block;
                 margin-left: auto;
                 margin-right: auto;
-                width: 100%;
-                height: auto;
-                border-radius: 4px;
-                margin-top: 8px;
+            }
+        }
+
+        section#buttons {
+            display: flex;
+            flex-wrap: nowrap;
+            justify-content: end;
+        }
+
+        #nav-toggle {
+            cursor: pointer;
+            display: block;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #nav-toggle-cb {
+            outline: 0;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        #nav-toggle-cb:checked+#menu {
+            display: flex;
+            animation: pullDown 0.3s forwards;
+        }
+
+        #nav-toggle-cb:not(:checked)+#menu {
+            display: flex;
+            animation: slideUp 0.3s forwards;
+        }
+
+        .input-group {
+            display: flex;
+            flex-wrap: nowrap;
+            line-height: 22px;
+            margin: 5px 0;
+        }
+
+        .input-group>label {
+            display: inline-block;
+            padding-right: 10px;
+            min-width: 47%;
+        }
+
+        .input-group input,
+        .input-group select,
+        .input-group span {
+            flex-grow: 1;
+        }
+
+        .range-max,
+        .range-min {
+            display: inline-block;
+            padding: 0 5px;
+        }
+
+        button,
+        .button {
+            display: block;
+            margin: 5px;
+            padding: 0 12px;
+            border: 0;
+            line-height: 28px;
+            cursor: pointer;
+            color: #fff;
+            background: #ff3034;
+            border-radius: 5px;
+            font-size: 16px;
+            outline: 0;
+        }
+
+        button:hover {
+            background: #ff494d;
+        }
+
+        button:active {
+            background: #f21c21;
+        }
+
+        button.disabled {
+            user-select: none;
+            pointer-events: none;
+            background: #a0a0a0;
+        }
+
+        label.disabled {
+            user-select: none;
+            pointer-events: none;
+            background: #606060;
+
+            &::before {
+                background-color: #808080;
+            }
+        }
+
+        input[type="range"].disabled {
+            user-select: none;
+            pointer-events: none;
+
+            &::-webkit-slider-runnable-track {
+                background: #808080;
             }
 
-            @media (min-width: 800px) and (orientation: landscape) {
-                #content {
-                    display: flex;
-                    flex-wrap: nowrap;
-                    align-items: stretch;
-                    flex-direction: row;
-                }
-
-                figure img {
-                    display: block;
-                    max-width: 100%;
-                    max-height: calc(100vh - 40px);
-                    width: auto;
-                    height: auto;
-                }
-
-                figure {
-                    padding: 0 0 0 0px;
-                    margin: 0;
-                    -webkit-margin-before: 0;
-                    margin-block-start: 0;
-                    -webkit-margin-after: 0;
-                    margin-block-end: 0;
-                    -webkit-margin-start: 0;
-                    margin-inline-start: 0;
-                    -webkit-margin-end: 0;
-                    margin-inline-end: 0;
-                    margin-left: auto;
-                    margin-right: auto;
-                }
-            }
-
-            section#buttons {
-                display: flex;
-                flex-wrap: nowrap;
-                justify-content: end;
-            }
-
-            #nav-toggle {
-                cursor: pointer;
-                display: block;
-                user-select: none;
-                -webkit-user-select: none;
-            }
-
-            #nav-toggle-cb {
-                outline: 0;
-                opacity: 0;
-                width: 0;
-                height: 0;
-            }
-
-            #nav-toggle-cb:checked+#menu {
-                display: flex;
-                animation: pullDown 0.3s forwards;
-            }
-
-            #nav-toggle-cb:not(:checked)+#menu {
-                display: flex;
-                animation: slideUp 0.3s forwards;
-            }
-
-            .input-group {
-                display: flex;
-                flex-wrap: nowrap;
-                line-height: 22px;
-                margin: 5px 0;
-            }
-
-            .input-group>label {
-                display: inline-block;
-                padding-right: 10px;
-                min-width: 47%;
-            }
-
-            .input-group input,
-            .input-group select,
-            .input-group span {
-                flex-grow: 1;
-            }
-
-            .range-max,
-            .range-min {
-                display: inline-block;
-                padding: 0 5px;
-            }
-
-            button,
-            .button {
-                display: block;
-                margin: 5px;
-                padding: 0 12px;
-                border: 0;
-                line-height: 28px;
-                cursor: pointer;
-                color: #fff;
-                background: #ff3034;
-                border-radius: 5px;
-                font-size: 16px;
-                outline: 0;
-            }
-
-            button:hover {
-                background: #ff494d;
-            }
-
-            button:active {
-                background: #f21c21;
-            }
-
-            button.disabled {
-                user-select: none;
-                pointer-events: none;
+            &::-webkit-slider-thumb {
                 background: #a0a0a0;
             }
 
-            label.disabled {
-                user-select: none;
-                pointer-events: none;
-                background: #606060;
+        }
 
-                &::before {
-                    background-color: #808080;
-                }
-            }
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 22px;
+            background: #363636;
+            cursor: pointer;
+            margin: 0;
+        }
 
-            input[type="range"].disabled {
-                user-select: none;
-                pointer-events: none;
+        input[type="range"]:focus {
+            outline: 0;
+        }
 
-                &::-webkit-slider-runnable-track {
-                    background: #808080;
-                }
+        input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 2px;
+            cursor: pointer;
+            background: #efefef;
+            border-radius: 0;
+            border: 0 solid #efefef;
+        }
 
-                &::-webkit-slider-thumb {
-                    background: #a0a0a0;
-                }
+        input[type="range"]::-webkit-slider-thumb {
+            border: 1px solid rgba(0, 0, 30, 0);
+            height: 22px;
+            width: 22px;
+            border-radius: 50px;
+            background: #ff3034;
+            cursor: pointer;
+            -webkit-appearance: none;
+            margin-top: -11.5px;
+        }
 
-            }
+        input[type="range"]:focus::-webkit-slider-runnable-track {
+            background: #efefef;
+        }
 
-            input[type="range"] {
-                -webkit-appearance: none;
-                width: 100%;
-                height: 22px;
-                background: #363636;
-                cursor: pointer;
-                margin: 0;
-            }
+        input[type="range"]::-moz-range-track {
+            width: 100%;
+            height: 2px;
+            cursor: pointer;
+            background: #efefef;
+            border-radius: 0;
+            border: 0 solid #efefef;
+        }
 
-            input[type="range"]:focus {
-                outline: 0;
-            }
+        input[type="range"]::-moz-range-thumb {
+            border: 1px solid rgba(0, 0, 30, 0);
+            height: 22px;
+            width: 22px;
+            border-radius: 50px;
+            background: #ff3034;
+            cursor: pointer;
+        }
 
-            input[type="range"]::-webkit-slider-runnable-track {
-                width: 100%;
-                height: 2px;
-                cursor: pointer;
-                background: #efefef;
-                border-radius: 0;
-                border: 0 solid #efefef;
-            }
+        input[type="range"]::-ms-track {
+            width: 100%;
+            height: 2px;
+            cursor: pointer;
+            background: 0 0;
+            border-color: transparent;
+            color: transparent;
+        }
 
-            input[type="range"]::-webkit-slider-thumb {
-                border: 1px solid rgba(0, 0, 30, 0);
-                height: 22px;
-                width: 22px;
-                border-radius: 50px;
-                background: #ff3034;
-                cursor: pointer;
-                -webkit-appearance: none;
-                margin-top: -11.5px;
-            }
+        input[type="range"]::-ms-fill-lower {
+            background: #efefef;
+            border: 0 solid #efefef;
+            border-radius: 0;
+        }
 
-            input[type="range"]:focus::-webkit-slider-runnable-track {
-                background: #efefef;
-            }
+        input[type="range"]::-ms-fill-upper {
+            background: #efefef;
+            border: 0 solid #efefef;
+            border-radius: 0;
+        }
 
-            input[type="range"]::-moz-range-track {
-                width: 100%;
-                height: 2px;
-                cursor: pointer;
-                background: #efefef;
-                border-radius: 0;
-                border: 0 solid #efefef;
-            }
+        input[type="range"]::-ms-thumb {
+            border: 1px solid rgba(0, 0, 30, 0);
+            height: 22px;
+            width: 22px;
+            border-radius: 50px;
+            background: #ff3034;
+            cursor: pointer;
+            height: 2px;
+        }
 
-            input[type="range"]::-moz-range-thumb {
-                border: 1px solid rgba(0, 0, 30, 0);
-                height: 22px;
-                width: 22px;
-                border-radius: 50px;
-                background: #ff3034;
-                cursor: pointer;
-            }
+        input[type="range"]:focus::-ms-fill-lower {
+            background: #efefef;
+        }
 
-            input[type="range"]::-ms-track {
-                width: 100%;
-                height: 2px;
-                cursor: pointer;
-                background: 0 0;
-                border-color: transparent;
-                color: transparent;
-            }
+        input[type="range"]:focus::-ms-fill-upper {
+            background: #363636;
+        }
 
-            input[type="range"]::-ms-fill-lower {
-                background: #efefef;
-                border: 0 solid #efefef;
-                border-radius: 0;
-            }
+        .switch {
+            display: block;
+            position: relative;
+            margin-left: auto;
+            line-height: 22px;
+            font-size: 16px;
+            height: 22px;
+            margin-right: 5px;
+        }
 
-            input[type="range"]::-ms-fill-upper {
-                background: #efefef;
-                border: 0 solid #efefef;
-                border-radius: 0;
-            }
+        .switch input {
+            outline: 0;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
 
-            input[type="range"]::-ms-thumb {
-                border: 1px solid rgba(0, 0, 30, 0);
-                height: 22px;
-                width: 22px;
-                border-radius: 50px;
-                background: #ff3034;
-                cursor: pointer;
-                height: 2px;
-            }
+        .slider {
+            width: 50px;
+            height: 22px;
+            border-radius: 22px;
+            cursor: pointer;
+            background-color: grey;
+        }
 
-            input[type="range"]:focus::-ms-fill-lower {
-                background: #efefef;
-            }
+        .slider,
+        .slider:before {
+            display: inline-block;
+            transition: 0.4s;
+        }
 
-            input[type="range"]:focus::-ms-fill-upper {
-                background: #363636;
-            }
+        .slider:before {
+            position: relative;
+            content: "";
+            border-radius: 50%;
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            top: 3px;
+            background-color: #fff;
+        }
 
-            .switch {
-                display: block;
-                position: relative;
-                margin-left: auto;
-                line-height: 22px;
-                font-size: 16px;
-                height: 22px;
-                margin-right: 5px;
-            }
+        input:checked+.slider {
+            background-color: #ff3034;
+        }
 
-            .switch input {
-                outline: 0;
-                opacity: 0;
-                width: 0;
-                height: 0;
-            }
+        input:checked+.slider:before {
+            -webkit-transform: translateX(26px);
+            transform: translateX(26px);
+        }
 
-            .slider {
-                width: 50px;
-                height: 22px;
-                border-radius: 22px;
-                cursor: pointer;
-                background-color: grey;
-            }
+        select {
+            border: 1px solid #363636;
+            font-size: 14px;
+            height: 22px;
+            outline: 0;
+            border-radius: 5px;
+            margin-right: 4px;
+            margin-left: 1px;
+        }
 
-            .slider,
-            .slider:before {
-                display: inline-block;
-                transition: 0.4s;
-            }
+        select.disabled {
+            user-select: none;
+            pointer-events: none;
+            background: #a0a0a0;
+        }
 
-            .slider:before {
-                position: relative;
-                content: "";
-                border-radius: 50%;
-                height: 16px;
-                width: 16px;
-                left: 4px;
-                top: 3px;
-                background-color: #fff;
-            }
+        .image-container {
+            position: relative;
+            min-width: 160px;
+        }
 
-            input:checked+.slider {
-                background-color: #ff3034;
-            }
+        .close {
+            position: absolute;
+            right: 5px;
+            top: 5px;
+            background: #ff3034;
+            width: 16px;
+            height: 16px;
+            border-radius: 100px;
+            color: #fff;
+            text-align: center;
+            line-height: 18px;
+            cursor: pointer;
+        }
 
-            input:checked+.slider:before {
-                -webkit-transform: translateX(26px);
-                transform: translateX(26px);
-            }
+        .hidden {
+            display: none;
+        }
 
-            select {
-                border: 1px solid #363636;
-                font-size: 14px;
-                height: 22px;
-                outline: 0;
-                border-radius: 5px;
-                margin-right: 4px;
-                margin-left: 1px;
-            }
+        .save {
+            position: absolute;
+            right: 25px;
+            top: 0px;
+            height: 16px;
+            line-height: 16px;
+            padding: 0 4px;
+            text-decoration: none;
+            cursor: pointer;
+        }
 
-            select.disabled {
-                user-select: none;
-                pointer-events: none;
-                background: #a0a0a0;
-            }
+        input[type="text"] {
+            border: 1px solid #363636;
+            font-size: 14px;
+            height: 20px;
+            margin: 1px;
+            outline: 0;
+            max-width: 100%;
+            border-radius: 5px;
+        }
 
-            .image-container {
-                position: relative;
-                min-width: 160px;
-            }
+        .inline-button {
+            line-height: 20px;
+            margin: 2px;
+            margin-right: 5px;
+            margin-left: auto;
+            padding: 1px 4px 2px 4px;
+        }
 
-            .close {
-                position: absolute;
-                right: 5px;
-                top: 5px;
-                background: #ff3034;
-                width: 16px;
-                height: 16px;
-                border-radius: 100px;
-                color: #fff;
-                text-align: center;
-                line-height: 18px;
-                cursor: pointer;
-            }
+        label.toggle-section-label {
+            cursor: pointer;
+            display: block;
+        }
 
-            .hidden {
-                display: none;
-            }
+        input.toggle-section-button {
+            outline: 0;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
 
-            .save {
-                position: absolute;
-                right: 25px;
-                top: 0px;
-                height: 16px;
-                line-height: 16px;
-                padding: 0 4px;
-                text-decoration: none;
-                cursor: pointer;
-            }
+        input.toggle-section-button:checked+section.toggle-section {
+            display: none;
+        }
+    </style>
+</head>
 
-            input[type="text"] {
-                border: 1px solid #363636;
-                font-size: 14px;
-                height: 20px;
-                margin: 1px;
-                outline: 0;
-                max-width: 100%;
-                border-radius: 5px;
-            }
+<body>
+    <section class="main">
+        <div id="logo">
+            <label for="nav-toggle-cb" id="nav-toggle">&#9776;&nbsp;&nbsp;Toggle settings</label>
+        </div>
+        <div id="content">
+            <div id="sidebar">
+                <input type="checkbox" id="nav-toggle-cb" checked="checked" />
+                <nav id="menu">
 
-            .inline-button {
-                line-height: 20px;
-                margin: 2px;
-                margin-right: 5px;
-                margin-left: auto;
-                padding: 1px 4px 2px 4px;
-            }
-
-            label.toggle-section-label {
-                cursor: pointer;
-                display: block;
-            }
-
-            input.toggle-section-button {
-                outline: 0;
-                opacity: 0;
-                width: 0;
-                height: 0;
-            }
-
-            input.toggle-section-button:checked+section.toggle-section {
-                display: none;
-            }
-
-        </style>
-    </head>
-
-    <body>
-        <section class="main">
-            <div id="logo">
-                <label for="nav-toggle-cb" id="nav-toggle">&#9776;&nbsp;&nbsp;Toggle settings</label>
-            </div>
-            <div id="content">
-                <div id="sidebar">
-                    <input type="checkbox" id="nav-toggle-cb" checked="checked" />
-                    <nav id="menu">
-
-                        <div class="input-group" id="framesize-group">
-                            <label for="framesize">Resolution</label>
-                            <select id="framesize" class="default-action">
-                                <option value="0">240x240</option>
-                                <option value="1">480x480</option>
-                                <option value="2">VGA(640x480)</option>
-                            </select>
-                        </div>
-                        <div class="input-group" id="set-action-group">
-                            <label for="set-action">Action</label>
-                            <div class="text">
-                                <input id="action" type="text" minlength="" maxlength="1024" size="" value="">
-                            </div>
-                            <button class="inline-button" id="set-action">Set</button>
-                        </div>
-                        <div class="input-group" id="score-group">
-                            <label for="score">Score Thresh</label>
-                            <div class="range-min">10</div>
-                            <input type="range" id="score" min="10" max="100" value="60"
-                                class="default-action disabled" />
-                            <div class="range-max">100</div>
-                        </div>
-                        <div class="input-group" id="iou-group">
-                            <label for="iou">Iou Thresh</label>
-                            <div class="range-min">0</div>
-                            <input type="range" id="iou" min="0" max="100" value="45" class="default-action disabled" />
-                            <div class="range-max">100</div>
-                        </div>
-
-                        <div class="input-group" id="sample-group">
-                            <label for="sample-only">Sample Only</label>
-                            <div class="switch">
-                                <input id="sample-only" type="checkbox" class="default-action" />
-                                <label class="slider sample-only-switch" for="sample-only"></label>
-                            </div>
-                        </div>
-
-                        <div class="input-group" id="differed-group">
-                            <label for="differed-by-results">Differed by Results</label>
-                            <div class="switch">
-                                <input id="differed-by-results" type="checkbox" class="default-action" />
-                                <label class="slider differed-by-results-switch" for="differed-by-results"></label>
-                            </div>
-                        </div>
-
-                        <section id="buttons">
-                            <button id="save-still" class="disabled" herf="#" download="capture.jpg">Save Frame</button>
-                            <button id="toggle-stream">Start Stream</button>
-                        </section>
-                    </nav>
-                </div>
-                <figure>
-                    <div id="stream-container" class="image-container hidden">
-                        <img id="stream" src="" crossorigin />
+                    <div class="input-group" id="framesize-group">
+                        <label for="framesize">Resolution</label>
+                        <select id="framesize" class="default-action">
+                            <option value="0">240x240</option>
+                            <option value="1">480x480</option>
+                            <option value="2">VGA(640x480)</option>
+                        </select>
                     </div>
-                </figure>
+                    <div class="input-group" id="set-action-group">
+                        <label for="set-action">Action</label>
+                        <div class="text">
+                            <input id="action" type="text" minlength="" maxlength="1024" size="" value="">
+                        </div>
+                        <button class="inline-button" id="set-action">Set</button>
+                    </div>
+                    <div class="input-group" id="score-group">
+                        <label for="score">Score Thresh</label>
+                        <div class="range-min">10</div>
+                        <input type="range" id="score" min="10" max="100" value="60" class="default-action disabled" />
+                        <div class="range-max">100</div>
+                    </div>
+                    <div class="input-group" id="iou-group">
+                        <label for="iou">Iou Thresh</label>
+                        <div class="range-min">0</div>
+                        <input type="range" id="iou" min="0" max="100" value="45" class="default-action disabled" />
+                        <div class="range-max">100</div>
+                    </div>
+
+                    <div class="input-group" id="sample-group">
+                        <label for="sample-only">Sample Only</label>
+                        <div class="switch">
+                            <input id="sample-only" type="checkbox" class="default-action" />
+                            <label class="slider sample-only-switch" for="sample-only"></label>
+                        </div>
+                    </div>
+
+                    <div class="input-group" id="differed-group">
+                        <label for="differed-by-results">Differed by Results</label>
+                        <div class="switch">
+                            <input id="differed-by-results" type="checkbox" class="default-action" />
+                            <label class="slider differed-by-results-switch" for="differed-by-results"></label>
+                        </div>
+                    </div>
+
+                    <section id="buttons">
+                        <button id="save-still" class="disabled" herf="#" download="capture.jpg">Save Frame</button>
+                        <button id="toggle-stream">Start Stream</button>
+                    </section>
+                </nav>
             </div>
-        </section>
-        <script>
-            // commnon types
-            const Mode = {
-                UNKNOWN: 'UNKNOWN',
-                SAMPLE: 'SAMPLE',
-                INVOKE: 'INVOKE'
+            <figure>
+                <div id="stream-container" class="image-container hidden">
+                    <img id="stream" src="" crossorigin />
+                </div>
+            </figure>
+        </div>
+    </section>
+    <script>
+        // commnon types
+        const Mode = {
+            SAMPLE: 'SAMPLE',
+            INVOKE: 'INVOKE'
+        };
+
+        // shared variables
+        const baseHost = 'http://10.17.0.12'; // document.location.origin;
+        var isStreaming = false;
+        var workingMode = Mode.INVOKE;;
+        var modelInfo = null;
+
+        // init settings
+        async function initSettings() {
+            // async fetch resolution
+            let fetchResolution = async () => {
+                const cmd = 'SENSOR?';
+                const encodedCmd = btoa(cmd);
+
+                try {
+                    let response = await fetch(`${baseHost}/command?base64=${encodedCmd}`);
+                    const data = await response.json();
+
+                    const code = data['code'];
+                    if (code != 0) {
+                        throw new Error(data);
+                    }
+                    const value = data['data']['opt_id'];
+
+                    // active item in its value is equal to the value
+                    let resolutionList = document.getElementById('framesize');
+                    for (let i = 0; i < resolutionList.options.length; i++) {
+                        if (resolutionList.options[i].value == value) {
+                            resolutionList.options[i].selected = true;
+                            break;
+                        }
+                    }
+
+                    return true;
+                } catch (error) {
+                    console.error('Failed to fetch resolution:', error);
+                }
+
+                return false;
+            }
+
+            // async fetch action
+            let fetchAction = async () => {
+                const cmd = 'ACTION?';
+                const encodedCmd = btoa(cmd);
+
+                try {
+                    let response = await fetch(`${baseHost}/command?base64=${encodedCmd}`);
+                    const data = await response.json();
+
+                    const code = data['code'];
+                    if (code != 0) {
+                        throw new Error(data);
+                    }
+
+                    const value = data['data']['action'];
+                    let action = document.getElementById('action');
+                    action.value = value;
+
+                    return true;
+                } catch (error) {
+                    console.error('Failed to fetch action:', error);
+                }
+
+                return false;
+            }
+
+            await fetchResolution();
+            await fetchAction();
+        }
+
+        document.addEventListener("DOMContentLoaded", async function (event) {
+
+            initSettings();
+
+            const hide = el => {
+                el.classList.add('hidden')
+            }
+            const show = el => {
+                el.classList.remove('hidden')
+            }
+
+            const disable = el => {
+                el.classList.add('disabled')
+                el.disabled = true
+            }
+
+            const enable = el => {
+                el.classList.remove('disabled')
+                el.disabled = false
+            }
+
+
+            var baseHost = 'http://10.17.0.12' // document.location.origin;
+            var streamUrl = baseHost + ":8080";
+
+            const streamView = document.getElementById('stream')
+            const saveButton = document.getElementById("save-still");
+
+            saveButton.onclick = () => {
+                var canvas = document.createElement("canvas");
+                canvas.width = streamView.width;
+                canvas.height = streamView.height;
+                document.body.appendChild(canvas);
+                var context = canvas.getContext('2d');
+                context.drawImage(streamView, 0, 0);
+                try {
+                    var dataURL = canvas.toDataURL('image/jpeg');
+                    saveButton.href = dataURL;
+                    var d = new Date();
+                    saveButton.download = d.getFullYear() + ("0" + (d.getMonth() + 1)).slice(-2) + ("0" + d.getDate()).slice(-2) + ("0" + d.getHours()).slice(-2) + ("0" + d.getMinutes()).slice(-2) + ("0" + d.getSeconds()).slice(-2) + ".jpg";
+                } catch (e) {
+                    console.error(e);
+                }
+                canvas.parentNode.removeChild(canvas);
+            }
+
+            const viewContainer = document.getElementById("stream-container");
+            const streamButton = document.getElementById("toggle-stream");
+
+            const resolutionSelect = document.getElementById("framesize");
+
+            const scoreSlider = document.getElementById("score");
+            const iouSlider = document.getElementById("iou");
+
+            const sampleOnly = document.getElementById("sample-only");
+            const sampleSwitch = document.querySelector(".sample-only-switch");
+            const differedByResults = document.getElementById("differed-by-results");
+            const differedSwitch = document.querySelector(".differed-by-results-switch");
+
+            const stopStream = async () => {
+                disable(saveButton);
+                disable(scoreSlider);
+                disable(iouSlider);
+
+                window.stop();
+                isStreaming = false;
+
+                await fetch((() => {
+                    const cmd = 'BREAK';
+                    const encodedCmd = btoa(cmd);
+                    return `${baseHost}/command?base64=${encodedCmd}`;
+                })()).then(async (response) => {
+                    try {
+                        const data = await response.json();
+                        const code = data['code'];
+                        if (code != 0) {
+                            throw new Error(data);
+                        }
+                    } catch (error) {
+                        console.error('Failed to stop stream:', error);
+                    }
+                });
+
+                streamButton.innerHTML = "Start Stream";
+
+                enable(resolutionSelect);
+                enable(sampleSwitch);
+                enable(differedSwitch);
             };
 
-            // shared variables
-            const baseHost = 'http://10.17.0.12'; // document.location.origin;
-            var isStreaming = false;
-            var workingMode = Mode.UNKNOWN;;
+            const startStreamTimeout = 5000;
 
-            // init settings
-            async function initSettings() {
-                // async fetch resolution
-                let fetchResolution = async () => {
-                    const cmd = 'SENSOR?';
-                    const encodedCmd = btoa(cmd);
+            const startStream = async () => {
+                disable(resolutionSelect);
+                disable(sampleSwitch);
+                disable(differedSwitch);
 
-                    try {
-                        let response = await fetch(`${baseHost}/command?base64=${encodedCmd}`);
-                        const data = await response.json();
-
-                        const code = data['code'];
-                        if (code != 0) {
-                            throw new Error(data);
-                        }
-                        const value = data['data']['opt_id'];
-
-                        // active item in its value is equal to the value
-                        let resolutionList = document.getElementById('framesize');
-                        for (let i = 0; i < resolutionList.options.length; i++) {
-                            if (resolutionList.options[i].value == value) {
-                                resolutionList.options[i].selected = true;
-                                break;
-                            }
-                        }
-
-                        return true;
-                    } catch (error) {
-                        console.error('Failed to fetch resolution:', error);
-                    }
-
-                    return false;
-                }
-
-                // async fetch action
-                let fetchAction = async () => {
-                    const cmd = 'ACTION?';
-                    const encodedCmd = btoa(cmd);
-
-                    try {
-                        let response = await fetch(`${baseHost}/command?base64=${encodedCmd}`);
-                        const data = await response.json();
-
-                        const code = data['code'];
-                        if (code != 0) {
-                            throw new Error(data);
-                        }
-
-                        const value = data['data']['action'];
-                        let action = document.getElementById('action');
-                        action.value = value;
-
-                        return true;
-                    } catch (error) {
-                        console.error('Failed to fetch action:', error);
-                    }
-
-                    return false;
-                }
-
-                await fetchResolution();
-                await fetchAction();
-            }
-
-            document.addEventListener("DOMContentLoaded", function (event) {
-
-                initSettings();
-
-                const hide = el => {
-                    el.classList.add('hidden')
-                }
-                const show = el => {
-                    el.classList.remove('hidden')
-                }
-
-                const disable = el => {
-                    el.classList.add('disabled')
-                    el.disabled = true
-                }
-
-                const enable = el => {
-                    el.classList.remove('disabled')
-                    el.disabled = false
-                }
+                streamButton.classList.add('loading')
+                streamButton.innerHTML = "Starting Stream";
 
 
-                var baseHost = 'http://10.17.0.12' // document.location.origin;
-                var streamUrl = baseHost + ":8080";
+                const startTimer = setTimeout(() => {
+                    alert('Start stream timeout, please check the internet connection, then try again');
+                }, startStreamTimeout);
 
-                const streamView = document.getElementById('stream')
-                const saveButton = document.getElementById("save-still");
+                const onStartStreamSuccess = () => {
+                    clearTimeout(startTimer);
 
-                saveButton.onclick = () => {
-                    var canvas = document.createElement("canvas");
-                    canvas.width = streamView.width;
-                    canvas.height = streamView.height;
-                    document.body.appendChild(canvas);
-                    var context = canvas.getContext('2d');
-                    context.drawImage(streamView, 0, 0);
-                    try {
-                        var dataURL = canvas.toDataURL('image/jpeg');
-                        saveButton.href = dataURL;
-                        var d = new Date();
-                        saveButton.download = d.getFullYear() + ("0" + (d.getMonth() + 1)).slice(-2) + ("0" + d.getDate()).slice(-2) + ("0" + d.getHours()).slice(-2) + ("0" + d.getMinutes()).slice(-2) + ("0" + d.getSeconds()).slice(-2) + ".jpg";
-                    } catch (e) {
-                        console.error(e);
-                    }
-                    canvas.parentNode.removeChild(canvas);
-                }
-
-                const viewContainer = document.getElementById("stream-container");
-                const streamButton = document.getElementById("toggle-stream");
-
-                const resolutionSelect = document.getElementById("framesize");
-
-                const scoreSlider = document.getElementById("score");
-                const iouSlider = document.getElementById("iou");
-
-                const stopStream = () => {
-                    disable(saveButton);
-                    disable(scoreSlider);
-                    disable(iouSlider);
-
-                    window.stop();
-                    streamButton.innerHTML = "Start Stream";
-
-                    enable(resolutionSelect);
-                };
-
-                const startStream = () => {
-                    disable(resolutionSelect);
+                    isStreaming = true;
 
                     streamView.src = `${streamUrl}/stream/frame`;
                     show(viewContainer);
 
-                    streamButton.classList.add('loading')
-                    streamButton.innerHTML = "Starting Stream";
+                    enable(saveButton);
 
-                    setTimeout(() => {
-                        streamButton.classList.remove('loading')
-                        streamButton.innerHTML = "Stop Stream";
-
-                        enable(saveButton);
-                        enable(scoreSlider);
-                        enable(iouSlider);
-                    }, 3000);
-                };
-
-
-                streamButton.onclick = () => {
-                    const streamEnabled = streamButton.innerHTML === "Stop Stream";
-                    if (streamEnabled) {
-                        stopStream();
-                    } else {
-                        startStream();
-                    }
-                };
-
-
-                function updateConfig(el) {
-                    let value;
-                    switch (el.type) {
-                        case "checkbox":
-                            value = el.checked ? 1 : 0;
-                            break;
-                        case "range":
-                        case "select-one":
-                            value = el.value;
-                            break;
-                        case "button":
-                        case "submit":
-                            value = "1";
-                            break;
-                        default:
-                            return;
-                    }
-
-                    stopStream();
-
-                    const query = `${baseHost}/control?var=${el.id}&val=${value}`;
-
-                    fetch(query).then((response) => {
-                        console.log(
-                            `request to ${query} finished, status: ${response.status}`
-                        );
-                    });
+                    streamButton.classList.remove('loading');
+                    streamButton.innerHTML = "Stop Stream";
                 }
 
-                const sampleOnly = document.getElementById("sample-only");
-                const sampleSwitch = document.querySelector(".sample-only-switch");
-                const differedByResults = document.getElementById("differed-by-results");
-                const differedSwitch = document.querySelector(".differed-by-results-switch");
+                const onStartStreamFailure = () => {
+                    clearTimeout(startTimer);
 
-                sampleOnly.onchange = () => {
-                    if (sampleOnly.checked) {
-                        workingMode = Mode.SAMPLE;
-                        differedByResults.checked = false;
-                        disable(differedSwitch);
+                    streamButton.classList.remove('loading');
+                    streamButton.innerHTML = "Start Stream";
 
-                    } else {
-                        workingMode = Mode.INVOKE;
-                        enable(differedSwitch);
+                    enable(resolutionSelect);
+                    enable(sampleSwitch);
+                    enable(differedSwitch);
+                }
+
+                // set resolution
+                let success = await fetch((() => {
+                    const sensorId = 1;
+                    const optId = resolutionSelect.options[resolutionSelect.selectedIndex].value;
+                    const cmd = `SENSOR=${sensorId},1,${optId}`;
+                    const encodedCmd = btoa(cmd);
+                    return `${baseHost}/command?base64=${encodedCmd}`;
+                })()).then(async (response) => {
+                    try {
+                        const data = await response.json();
+                        const code = data['code'];
+                        if (code != 0) {
+                            throw new Error(data);
+                        }
+                        return true;
+                    } catch (error) {
+                        onStartStreamFailure();
+
+                        console.error('Failed to set resolution:', error);
+                        alert('Failed to set resolution, please check the connection between your device and the camera sensor, then try again');
                     }
+                    return false;
+                });
+
+                if (!success) {
+                    return;
+                }
+
+                // start stream
+                switch (workingMode) {
+                    case Mode.SAMPLE:
+                        fetch((() => {
+                            const cmd = 'SAMPLE=-1';
+                            const encodedCmd = btoa(cmd);
+                            return `${baseHost}/command?base64=${encodedCmd}`;
+                        })()).then(async (response) => {
+                            try {
+                                const data = await response.json();
+                                const code = data['code'];
+                                if (code != 0) {
+                                    throw new Error(data);
+                                }
+                                onStartStreamSuccess();
+                            } catch (error) {
+                                onStartStreamFailure();
+
+                                console.error('Failed to start stream:', error);
+                                alert('Failed to start stream, please check the connection between your device and the camera sensor, then try again');
+                            }
+                        });
+                        break;
+                    case Mode.INVOKE:
+                        // update the model info
+                        await fetch((() => {
+                            const cmd = 'INFO?';
+                            const encodedCmd = btoa(cmd);
+                            return `${baseHost}/command?base64=${encodedCmd}`;
+                        })()).then(async (response) => {
+                            try {
+                                const data = await response.json();
+                                const code = data['code'];
+                                if (code != 0) {
+                                    throw new Error(data);
+                                }
+                                modelInfo = JSON.parse(atob(data['data']['info']));
+                                console.log('Model info:', modelInfo);
+                            } catch (error) {
+                                console.error('Failed to fetch model info:', error);
+                            }
+                        });
+
+                        // start stream
+                        fetch((() => {
+                            const isDiffered = differedByResults.checked ? 1 : 0;
+                            const cmd = `INVOKE=-1,${isDiffered},0`;
+                            const encodedCmd = btoa(cmd);
+                            return `${baseHost}/command?base64=${encodedCmd}`;
+                        })()).then(async (response) => {
+                            try {
+                                const data = await response.json();
+                                const code = data['code'];
+                                if (code != 0) {
+                                    throw new Error(data);
+                                }
+                                const algorithmConfig = data['data']['algorithm']['config'];
+                                if (algorithmConfig.hasOwnProperty('tscore')) {
+                                    scoreSlider.value = algorithmConfig['tscore'];
+                                    enable(scoreSlider);
+                                }
+                                if (algorithmConfig.hasOwnProperty('tiou')) {
+                                    iouSlider.value = algorithmConfig['tiou'];
+                                    enable(iouSlider);
+                                }
+
+                                onStartStreamSuccess();
+                            } catch (error) {
+                                onStartStreamFailure();
+
+                                console.error('Failed to start stream:', error);
+                                alert('Failed to start stream, please check the connection between your device and the camera sensor, make sure the model valid, then try again');
+                            }
+                        });
                 };
 
-                differedByResults.onchange = () => {
-                    if (differedByResults.checked) {
-                        workingMode = Mode.SAMPLE;
-                        sampleOnly.checked = false;
-                        disable(sampleSwitch);
-                    } else {
-                        workingMode = Mode.INVOKE;
-                        enable(sampleSwitch);
-                    }
-                };
-            });
-        </script>
-    </body>
+            };
+
+
+            streamButton.onclick = () => {
+                const streamEnabled = streamButton.innerHTML === "Stop Stream";
+                if (streamEnabled) {
+                    stopStream();
+                } else {
+                    startStream();
+                }
+            };
+
+
+            function updateConfig(el) {
+                let value;
+                switch (el.type) {
+                    case "checkbox":
+                        value = el.checked ? 1 : 0;
+                        break;
+                    case "range":
+                    case "select-one":
+                        value = el.value;
+                        break;
+                    case "button":
+                    case "submit":
+                        value = "1";
+                        break;
+                    default:
+                        return;
+                }
+
+                stopStream();
+
+                const query = `${baseHost}/control?var=${el.id}&val=${value}`;
+
+                fetch(query).then((response) => {
+                    console.log(
+                        `request to ${query} finished, status: ${response.status}`
+                    );
+                });
+            }
+
+            sampleOnly.onchange = () => {
+                if (sampleOnly.checked) {
+                    workingMode = Mode.SAMPLE;
+                    differedByResults.checked = false;
+                    disable(differedSwitch);
+
+                } else {
+                    workingMode = Mode.INVOKE;
+                    enable(differedSwitch);
+                }
+            };
+
+            differedByResults.onchange = () => {
+                if (differedByResults.checked) {
+                    workingMode = Mode.SAMPLE;
+                    sampleOnly.checked = false;
+                    disable(sampleSwitch);
+                } else {
+                    workingMode = Mode.INVOKE;
+                    enable(sampleSwitch);
+                }
+            };
+        });
+    </script>
+</body>
 
 </html>
