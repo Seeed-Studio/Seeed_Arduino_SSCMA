@@ -74,7 +74,7 @@
             pointer-events: none;
             -webkit-user-select: none;
             user-select: none;
-            background: linear-gradient(90deg, #ff3034 50%, #ffffff 80%, #ff3034 50%);
+            background: linear-gradient(90deg, #8dc215 50%, #ffffff 80%, #8dc215 50%);
             background-size: 200% 100%;
             animation: loading 2s linear infinite;
         }
@@ -227,18 +227,18 @@
             line-height: 28px;
             cursor: pointer;
             color: #fff;
-            background: #ff3034;
+            background: #8dc215;
             border-radius: 5px;
             font-size: 16px;
             outline: 0;
         }
 
         button:hover {
-            background: #ff494d;
+            background: #9cd516;
         }
 
         button:active {
-            background: #f21c21;
+            background: #8dc215;
         }
 
         button.disabled {
@@ -269,6 +269,14 @@
                 background: #a0a0a0;
             }
 
+            &::-moz-range-track {
+                background: #808080;
+            }
+
+            &::-moz-range-thumb {
+                background: #a0a0a0;
+            }
+
         }
 
         input[type="range"] {
@@ -295,13 +303,17 @@
 
         input[type="range"]::-webkit-slider-thumb {
             border: 1px solid rgba(0, 0, 30, 0);
-            height: 22px;
-            width: 22px;
-            border-radius: 50px;
-            background: #ff3034;
+            height: 16px;
+            width: 16px;
+            border-radius: 35px;
+            background: #8dc215;
             cursor: pointer;
             -webkit-appearance: none;
             margin-top: -11.5px;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            background: #9cd516;
         }
 
         input[type="range"]:focus::-webkit-slider-runnable-track {
@@ -319,11 +331,15 @@
 
         input[type="range"]::-moz-range-thumb {
             border: 1px solid rgba(0, 0, 30, 0);
-            height: 22px;
-            width: 22px;
-            border-radius: 50px;
-            background: #ff3034;
+            height: 16px;
+            width: 16px;
+            border-radius: 35px;
+            background: #8dc215;
             cursor: pointer;
+        }
+
+        input[type="range"]::-moz-range-thumb:hover {
+            background: #9cd516;
         }
 
         input[type="range"]::-ms-track {
@@ -352,7 +368,7 @@
             height: 22px;
             width: 22px;
             border-radius: 50px;
-            background: #ff3034;
+            background: #8dc215;
             cursor: pointer;
             height: 2px;
         }
@@ -408,7 +424,7 @@
         }
 
         input:checked+.slider {
-            background-color: #ff3034;
+            background-color: #8dc215;
         }
 
         input:checked+.slider:before {
@@ -441,7 +457,7 @@
             position: absolute;
             right: 5px;
             top: 5px;
-            background: #ff3034;
+            background: #8dc215;
             width: 16px;
             height: 16px;
             border-radius: 100px;
