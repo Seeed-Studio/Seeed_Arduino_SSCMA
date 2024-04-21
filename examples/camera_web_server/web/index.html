@@ -589,6 +589,7 @@
             </div>
             <figure>
                 <div id="stream-container" class="image-container hidden">
+                    <!-- TODO: depracate stream view -->
                     <img id="stream" src="" crossorigin />
                     <canvas id="preview" crossorigin></canvas>
                 </div>
@@ -767,7 +768,7 @@
             const streamUrl = baseHost + ':8080/stream';
 
             const viewContainer = document.getElementById('stream-container');
-            const streamView = document.getElementById('stream')
+            const streamView = document.getElementById('stream') // TODO: depracate stream view
             const streamPreview = document.getElementById('preview');
 
             const resolutionSelect = document.getElementById('framesize');
@@ -1525,7 +1526,7 @@
 
                     isStreaming = true;
 
-                    streamView.src = `${streamUrl}/frame`;
+                    streamView.src = `${streamUrl}/frame`; // TODO: depracate stream view
                     streamPreviewController = new AbortController();
                     streamPreviewReadableStream(`${streamUrl}/result`, { signal: streamPreviewController.signal });
                     show(viewContainer);
