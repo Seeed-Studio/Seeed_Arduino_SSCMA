@@ -809,10 +809,11 @@
                             alert('Device reported failed to set action:' + error);
                         }
                     });
-                } catch (error) {
-                    console.error('Failed to set action:', error);
+                } catch (e) {
+                    console.error('Failed to set action:', e);
                     alert('Failed to establish connection to the device, please check the network connection');
                 }
+
                 setActionButton.classList.remove('loading');
             }
 
@@ -832,6 +833,84 @@
                     console.error(e);
                 }
             }
+
+            let isScoreSynchronizing = false;
+            const syncScore = async (target) => {
+                do {
+                    const cmd = `TSCORE=${target}`;
+                    const encodedCmd = btoa(cmd);
+                    try {
+                        target = await fetch(`${baseHost}/command?base64=${encodedCmd}`).then(async (response) => {
+                            try {
+                                const data = await response.json();
+                                const code = data['code'];
+                                if (code != 0) {
+                                    throw new Error(code);
+                                }
+                                return target;
+                            } catch (error) {
+                                console.error('Failed to set score:', error);
+                                return -1;
+                            }
+                        });
+                    } catch (e) {
+                        console.error('Failed to set score:', e);
+                    };
+                    let current = scoreSlider.value;
+                    if (current == target) {
+                        isScoreSynchronizing = false;
+                        break;
+                    }
+                    target = current;
+                } while (isStreaming);
+            };
+
+            scoreSlider.oninput = () => {
+                if (isScoreSynchronizing) {
+                    return;
+                }
+                isScoreSynchronizing = true;
+                syncScore(scoreSlider.value);
+            };
+
+            let isIouSynchronizing = false;
+            const syncIou = async (target) => {
+                do {
+                    const cmd = `TIOU=${target}`;
+                    const encodedCmd = btoa(cmd);
+                    try {
+                        target = await fetch(`${baseHost}/command?base64=${encodedCmd}`).then(async (response) => {
+                            try {
+                                const data = await response.json();
+                                const code = data['code'];
+                                if (code != 0) {
+                                    throw new Error(code);
+                                }
+                                return target;
+                            } catch (error) {
+                                console.error('Failed to set iou:', error);
+                                return -1;
+                            }
+                        });
+                    } catch (e) {
+                        console.error('Failed to set iou:', e);
+                    };
+                    let current = iouSlider.value;
+                    if (current == target) {
+                        isIouSynchronizing = false;
+                        break;
+                    }
+                    target = current;
+                } while (isStreaming);
+            };
+
+            iouSlider.oninput = () => {
+                if (isIouSynchronizing) {
+                    return;
+                }
+                isIouSynchronizing = true;
+                syncIou(iouSlider.value);
+            };
 
             const stopStream = async () => {
                 disable(saveButton);
