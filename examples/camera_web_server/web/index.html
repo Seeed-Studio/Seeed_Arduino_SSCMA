@@ -1453,7 +1453,9 @@
                 try {
                     const code = responseResult['code'];
                     if (code != 0) {
+                        stopStream();
                         console.error('Error device status on stream event:', code);
+                        alert(`Error device status on stream event: {code}, please make sure the sensor is correctly connected to the device`);
                         return;
                     }
 
