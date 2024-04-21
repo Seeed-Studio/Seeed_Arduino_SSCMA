@@ -762,21 +762,20 @@
             const saveButton = document.getElementById("save-still");
 
             saveButton.onclick = () => {
-                var canvas = document.createElement("canvas");
-                canvas.width = streamView.width;
-                canvas.height = streamView.height;
-                document.body.appendChild(canvas);
-                var context = canvas.getContext('2d');
-                context.drawImage(streamView, 0, 0);
                 try {
-                    var dataURL = canvas.toDataURL('image/jpeg');
+                    var dataURL = streamPreview.toDataURL('image/jpeg');
                     saveButton.href = dataURL;
                     var d = new Date();
-                    saveButton.download = d.getFullYear() + ("0" + (d.getMonth() + 1)).slice(-2) + ("0" + d.getDate()).slice(-2) + ("0" + d.getHours()).slice(-2) + ("0" + d.getMinutes()).slice(-2) + ("0" + d.getSeconds()).slice(-2) + ".jpg";
+                    saveButton.download = d.getFullYear() +
+                        ("0" + (d.getMonth() + 1)).slice(-2) +
+                        ("0" + d.getDate()).slice(-2) +
+                        ("0" + d.getHours()).slice(-2) +
+                        ("0" + d.getMinutes()).slice(-2) +
+                        ("0" + d.getSeconds()).slice(-2) +
+                        ".jpeg";
                 } catch (e) {
                     console.error(e);
                 }
-                canvas.parentNode.removeChild(canvas);
             }
 
             const viewContainer = document.getElementById("stream-container");
