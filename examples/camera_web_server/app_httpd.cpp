@@ -706,7 +706,7 @@ static esp_err_t stream_result_handler(httpd_req_t* req) {
                 rsp_buf[len] = MSG_TERMI_STR[i];
             }
             rsp_buf[len] = '\0';
-            res          = httpd_resp_send_chunk(req, rsp_buf, len);
+            res          = httpd_resp_send(req, rsp_buf, len);
 
             break;
         }
