@@ -70,6 +70,15 @@
             }
         }
 
+        #set-action.loading {
+            pointer-events: none;
+            -webkit-user-select: none;
+            user-select: none;
+            background: linear-gradient(90deg, #a0a0a0 50%, #ffffff 80%, #a0a0a0 50%);
+            background-size: 200% 100%;
+            animation: loading 2s linear infinite;
+        }
+
         #toggle-stream.loading {
             pointer-events: none;
             -webkit-user-select: none;
@@ -732,7 +741,7 @@
             await fetchAction();
         }
 
-        document.addEventListener("DOMContentLoaded", async function (event) {
+        document.addEventListener('DOMContentLoaded', async function (event) {
 
             initSettings();
 
@@ -755,11 +764,57 @@
 
 
             const baseHost = 'http://10.17.0.12' // document.location.origin;
-            const streamUrl = baseHost + ":8080/stream";
+            const streamUrl = baseHost + ':8080/stream';
 
+            const viewContainer = document.getElementById('stream-container');
             const streamView = document.getElementById('stream')
             const streamPreview = document.getElementById('preview');
-            const saveButton = document.getElementById("save-still");
+
+            const resolutionSelect = document.getElementById('framesize');
+
+            const setActionButton = document.getElementById('set-action');
+            const saveButton = document.getElementById('save-still');
+            const streamButton = document.getElementById('toggle-stream');
+
+            const scoreSlider = document.getElementById('score');
+            const iouSlider = document.getElementById('iou');
+
+            const sampleOnly = document.getElementById('sample-only');
+            const sampleSwitch = document.querySelector('.sample-only-switch');
+            const differedByResults = document.getElementById('differed-by-results');
+            const differedSwitch = document.querySelector('.differed-by-results-switch');
+
+            let streamPreviewController = null;
+
+            const streamPreviewCtx = streamPreview.getContext('2d');
+            const streamPreviewFrame = new Image();
+
+            setActionButton.onclick = async () => {
+                setActionButton.classList.add('loading')
+
+                const action = document.getElementById('action').value;
+                const cmd = `ACTION="${action}"`;
+                const encodedCmd = btoa(cmd);
+
+                try {
+                    await fetch(`${baseHost}/command?base64=${encodedCmd}`).then(async (response) => {
+                        try {
+                            const data = await response.json();
+                            const code = data['code'];
+                            if (code != 0) {
+                                throw new Error(code);
+                            }
+                        } catch (error) {
+                            console.error('Failed to set action:', error);
+                            alert('Device reported failed to set action:' + error);
+                        }
+                    });
+                } catch (error) {
+                    console.error('Failed to set action:', error);
+                    alert('Failed to establish connection to the device, please check the network connection');
+                }
+                setActionButton.classList.remove('loading');
+            }
 
             saveButton.onclick = () => {
                 try {
@@ -767,34 +822,16 @@
                     saveButton.href = dataURL;
                     var d = new Date();
                     saveButton.download = d.getFullYear() +
-                        ("0" + (d.getMonth() + 1)).slice(-2) +
-                        ("0" + d.getDate()).slice(-2) +
-                        ("0" + d.getHours()).slice(-2) +
-                        ("0" + d.getMinutes()).slice(-2) +
-                        ("0" + d.getSeconds()).slice(-2) +
-                        ".jpeg";
+                        ('0' + (d.getMonth() + 1)).slice(-2) +
+                        ('0' + d.getDate()).slice(-2) +
+                        ('0' + d.getHours()).slice(-2) +
+                        ('0' + d.getMinutes()).slice(-2) +
+                        ('0' + d.getSeconds()).slice(-2) +
+                        '.jpeg';
                 } catch (e) {
                     console.error(e);
                 }
             }
-
-            const viewContainer = document.getElementById("stream-container");
-            const streamButton = document.getElementById("toggle-stream");
-
-            const resolutionSelect = document.getElementById("framesize");
-
-            const scoreSlider = document.getElementById("score");
-            const iouSlider = document.getElementById("iou");
-
-            const sampleOnly = document.getElementById("sample-only");
-            const sampleSwitch = document.querySelector(".sample-only-switch");
-            const differedByResults = document.getElementById("differed-by-results");
-            const differedSwitch = document.querySelector(".differed-by-results-switch");
-
-            let streamPreviewController = null;
-
-            const streamPreviewCtx = streamPreview.getContext('2d');
-            const streamPreviewFrame = new Image();
 
             const stopStream = async () => {
                 disable(saveButton);
@@ -824,7 +861,7 @@
                     }
                 });
 
-                streamButton.innerHTML = "Start Stream";
+                streamButton.innerHTML = 'Start Stream';
 
                 enable(resolutionSelect);
                 enable(sampleSwitch);
@@ -839,7 +876,7 @@
                 for (let i = 0; i < boxes.length; i += 1) {
                     const rect = boxes[i];
                     if (rect.length < 6) {
-                        console.error("Bad bounding box:", rect);
+                        console.error('Bad bounding box:', rect);
                         continue;
                     }
                     const x = rect[0];
