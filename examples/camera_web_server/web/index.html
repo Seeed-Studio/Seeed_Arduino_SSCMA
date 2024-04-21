@@ -725,6 +725,14 @@
 
             let streamPreviewController = null;
 
+            const streamPreviewCtx = streamPreview.getContext('2d');
+            const streamPreviewFrame = new Image();
+            streamPreviewFrame.onload = () => {
+                streamPreview.width = streamPreviewFrame.width;
+                streamPreview.height = streamPreviewFrame.height;
+                streamPreviewCtx.drawImage(streamPreviewFrame, 0, 0, streamPreviewFrame.width, streamPreviewFrame.height);
+            };
+
             const stopStream = async () => {
                 disable(saveButton);
                 disable(scoreSlider);
@@ -760,6 +768,47 @@
                 enable(differedSwitch);
             };
 
+            const streamPreviewHandler = async (responseResult) => {
+                try {
+                    const code = responseResult['code'];
+                    if (code != 0) {
+                        console.error('Error device status on stream event:', code);
+                        return;
+                    }
+
+                    const frameCtx = responseResult['data']['image']
+                    streamPreviewFrame.src = `data:image/jpeg;base64,${frameCtx}`;
+
+                    // visulize results
+                } catch {
+                    console.error('Failed to process response:', responseResult);
+                }
+            };
+
+            const streamPreviewReadableStream = async (url, { signal }) => {
+                const response = await fetch(url, { signal });
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                while (!signal.aborted) {
+                    const { done, value } = await reader.read();
+                    if (done) {
+                        if (!signal.aborted && isStreaming) {
+                            stopStream();
+                            alert('Stream closed unexpectedly, please check your network connection or device status, then try again');
+                        }
+                        return;
+                    }
+                    try {
+                        const valueStr = decoder.decode(value);
+                        const responseResult = JSON.parse(valueStr);
+                        streamPreviewHandler(responseResult);
+                    } catch (error) {
+                        console.error('Failed to parse response:', error);
+                        continue;
+                    }
+                }
+            }
+
             const startStreamTimeout = 5000;
 
             const startStream = async () => {
@@ -769,7 +818,6 @@
 
                 streamButton.classList.add('loading')
                 streamButton.innerHTML = "Starting Stream";
-
 
                 const startTimer = setTimeout(() => {
                     onStartStreamFailure();
@@ -782,6 +830,8 @@
                     isStreaming = true;
 
                     streamView.src = `${streamUrl}/frame`;
+                    streamPreviewController = new AbortController();
+                    streamPreviewReadableStream(`${streamUrl}/result`, { signal: streamPreviewController.signal });
                     show(viewContainer);
 
                     enable(saveButton);
@@ -792,6 +842,10 @@
 
                 const onStartStreamFailure = () => {
                     clearTimeout(startTimer);
+
+                    if (streamPreviewController) {
+                        streamPreviewController.abort();
+                    }
 
                     streamButton.classList.remove('loading');
                     streamButton.innerHTML = "Start Stream";
@@ -852,6 +906,7 @@
                             }
                         });
                         break;
+
                     case Mode.INVOKE:
                         // update the model info
                         await fetch((() => {
@@ -904,9 +959,7 @@
                             }
                         });
                 };
-
             };
-
 
             streamButton.onclick = () => {
                 const streamEnabled = streamButton.innerHTML === "Stop Stream";
@@ -939,55 +992,6 @@
                     enable(sampleSwitch);
                 }
             };
-
-            const streamPreviewCtx = streamPreview.getContext('2d');
-            const streamPreviewFrame = new Image();
-            streamPreviewFrame.onload = () => {
-                streamPreview.width = streamPreviewFrame.width;
-                streamPreview.height = streamPreviewFrame.height;
-                streamPreviewCtx.drawImage(streamPreviewFrame, 0, 0, streamPreviewFrame.width, streamPreviewFrame.height);
-            };
-
-            const streamPreviewHandler = async (responseResult) => {
-                try {
-                    const code = responseResult['code'];
-                    if (code != 0) {
-                        console.error('Error device status on stream event:', code);
-                        return;
-                    }
-
-                    const frameCtx = responseResult['data']['image']
-                    streamPreviewFrame.src = `data:image/jpeg;base64,${frameCtx}`;
-
-                    // visulize results
-                } catch {
-                    console.error('Failed to process response:', responseResult);
-                }
-            };
-
-            const streamPreviewReadableStream = async ({ signal }) => {
-                const response = await fetch(url, { signal });
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-                while (!signal.aborted) {
-                    const { done, value } = await reader.read();
-                    if (done) {
-                        if (!signal.aborted && isStreaming) {
-                            stopStream();
-                            alert('Stream closed unexpectedly, please check your network connection or device status, then try again');
-                        }
-                        return;
-                    }
-                    try {
-                        const valueStr = decoder.decode(value);
-                        const responseResult = JSON.parse(valueStr);
-                        streamPreviewHandler(responseResult);
-                    } catch (error) {
-                        console.error('Failed to parse response:', error);
-                        continue;
-                    }
-                }
-            }
         });
     </script>
 </body>
