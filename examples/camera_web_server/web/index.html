@@ -121,7 +121,7 @@
             margin-inline-end: 0;
         }
 
-        figure img {
+        figure img, figure canvas {
             display: block;
             margin-left: auto;
             margin-right: auto;
@@ -139,7 +139,7 @@
                 flex-direction: row;
             }
 
-            figure img {
+            figure img, figure canvas {
                 display: block;
                 max-width: 100%;
                 max-height: calc(100vh - 40px);
@@ -581,6 +581,7 @@
             <figure>
                 <div id="stream-container" class="image-container hidden">
                     <img id="stream" src="" crossorigin />
+                    <canvas id="preview" crossorigin></canvas>
                 </div>
             </figure>
         </div>
@@ -594,9 +595,9 @@
 
         // shared variables
         const baseHost = 'http://10.17.0.12'; // document.location.origin;
-        var isStreaming = false;
-        var workingMode = Mode.INVOKE;;
-        var modelInfo = null;
+        let isStreaming = false;
+        let workingMode = Mode.INVOKE;;
+        let modelInfo = null;
 
         // init settings
         async function initSettings() {
@@ -684,10 +685,11 @@
             }
 
 
-            var baseHost = 'http://10.17.0.12' // document.location.origin;
-            var streamUrl = baseHost + ":8080";
+            const baseHost = 'http://10.17.0.12' // document.location.origin;
+            const streamUrl = baseHost + ":8080/stream";
 
             const streamView = document.getElementById('stream')
+            const streamPreview = document.getElementById('preview');
             const saveButton = document.getElementById("save-still");
 
             saveButton.onclick = () => {
@@ -721,12 +723,18 @@
             const differedByResults = document.getElementById("differed-by-results");
             const differedSwitch = document.querySelector(".differed-by-results-switch");
 
+            let streamPreviewController = null;
+
             const stopStream = async () => {
                 disable(saveButton);
                 disable(scoreSlider);
                 disable(iouSlider);
 
                 window.stop();
+
+                if (streamPreviewController) {
+                    streamPreviewController.abort();
+                }
                 isStreaming = false;
 
                 await fetch((() => {
@@ -764,6 +772,7 @@
 
 
                 const startTimer = setTimeout(() => {
+                    onStartStreamFailure();
                     alert('Start stream timeout, please check the internet connection, then try again');
                 }, startStreamTimeout);
 
@@ -772,7 +781,7 @@
 
                     isStreaming = true;
 
-                    streamView.src = `${streamUrl}/stream/frame`;
+                    streamView.src = `${streamUrl}/frame`;
                     show(viewContainer);
 
                     enable(saveButton);
@@ -908,36 +917,6 @@
                 }
             };
 
-
-            function updateConfig(el) {
-                let value;
-                switch (el.type) {
-                    case "checkbox":
-                        value = el.checked ? 1 : 0;
-                        break;
-                    case "range":
-                    case "select-one":
-                        value = el.value;
-                        break;
-                    case "button":
-                    case "submit":
-                        value = "1";
-                        break;
-                    default:
-                        return;
-                }
-
-                stopStream();
-
-                const query = `${baseHost}/control?var=${el.id}&val=${value}`;
-
-                fetch(query).then((response) => {
-                    console.log(
-                        `request to ${query} finished, status: ${response.status}`
-                    );
-                });
-            }
-
             sampleOnly.onchange = () => {
                 if (sampleOnly.checked) {
                     workingMode = Mode.SAMPLE;
@@ -960,6 +939,55 @@
                     enable(sampleSwitch);
                 }
             };
+
+            const streamPreviewCtx = streamPreview.getContext('2d');
+            const streamPreviewFrame = new Image();
+            streamPreviewFrame.onload = () => {
+                streamPreview.width = streamPreviewFrame.width;
+                streamPreview.height = streamPreviewFrame.height;
+                streamPreviewCtx.drawImage(streamPreviewFrame, 0, 0, streamPreviewFrame.width, streamPreviewFrame.height);
+            };
+
+            const streamPreviewHandler = async (responseResult) => {
+                try {
+                    const code = responseResult['code'];
+                    if (code != 0) {
+                        console.error('Error device status on stream event:', code);
+                        return;
+                    }
+
+                    const frameCtx = responseResult['data']['image']
+                    streamPreviewFrame.src = `data:image/jpeg;base64,${frameCtx}`;
+
+                    // visulize results
+                } catch {
+                    console.error('Failed to process response:', responseResult);
+                }
+            };
+
+            const streamPreviewReadableStream = async ({ signal }) => {
+                const response = await fetch(url, { signal });
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                while (!signal.aborted) {
+                    const { done, value } = await reader.read();
+                    if (done) {
+                        if (!signal.aborted && isStreaming) {
+                            stopStream();
+                            alert('Stream closed unexpectedly, please check your network connection or device status, then try again');
+                        }
+                        return;
+                    }
+                    try {
+                        const valueStr = decoder.decode(value);
+                        const responseResult = JSON.parse(valueStr);
+                        streamPreviewHandler(responseResult);
+                    } catch (error) {
+                        console.error('Failed to parse response:', error);
+                        continue;
+                    }
+                }
+            }
         });
     </script>
 </body>
