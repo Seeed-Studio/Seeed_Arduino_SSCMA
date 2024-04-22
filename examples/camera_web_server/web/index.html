@@ -201,6 +201,10 @@
             display: flex;
             animation: slideUp 0.3s forwards;
         }
+        
+        #save-still-object {
+            display: none;
+        }
 
         .input-group {
             display: flex;
@@ -582,15 +586,14 @@
                     </div>
 
                     <section id="buttons">
-                        <button id="save-still" class="disabled" herf="#" download="capture.jpg">Save Frame</button>
+                        <a id="save-still-object"></a>
+                        <button id="save-still" class="disabled">Save Frame</button>
                         <button id="toggle-stream">Start Stream</button>
                     </section>
                 </nav>
             </div>
             <figure>
                 <div id="stream-container" class="image-container hidden">
-                    <!-- TODO: depracate stream view -->
-                    <img id="stream" src="" crossorigin />
                     <canvas id="preview" crossorigin></canvas>
                 </div>
             </figure>
@@ -673,7 +676,7 @@
         };
 
         // shared variables
-        const baseHost = 'http://10.17.0.12'; // document.location.origin;
+        const baseHost = document.location.origin;
         let isStreaming = false;
         let workingMode = Mode.INVOKE;;
         let modelInfo = null;
@@ -768,7 +771,6 @@
             const streamUrl = baseHost + ':8080/stream';
 
             const viewContainer = document.getElementById('stream-container');
-            const streamView = document.getElementById('stream') // TODO: depracate stream view
             const streamPreview = document.getElementById('preview');
 
             const resolutionSelect = document.getElementById('framesize');
@@ -776,6 +778,8 @@
             const setActionButton = document.getElementById('set-action');
             const saveButton = document.getElementById('save-still');
             const streamButton = document.getElementById('toggle-stream');
+
+            const saveButtonObject = document.getElementById('save-still-object');
 
             const scoreSlider = document.getElementById('score');
             const iouSlider = document.getElementById('iou');
@@ -820,16 +824,12 @@
 
             saveButton.onclick = () => {
                 try {
-                    var dataURL = streamPreview.toDataURL('image/jpeg');
-                    saveButton.href = dataURL;
-                    var d = new Date();
-                    saveButton.download = d.getFullYear() +
-                        ('0' + (d.getMonth() + 1)).slice(-2) +
-                        ('0' + d.getDate()).slice(-2) +
-                        ('0' + d.getHours()).slice(-2) +
-                        ('0' + d.getMinutes()).slice(-2) +
-                        ('0' + d.getSeconds()).slice(-2) +
-                        '.jpeg';
+                    const dataURL = streamPreview.toDataURL('image/jpeg');
+                    saveButtonObject.setAttribute('href', dataURL);
+                    const date = new Date();
+                    const filename = `${date.getFullYear()}_${date.getMonth() + 1}_${date.getDate()}_${date.getHours()}_${date.getMinutes()}_${date.getSeconds()}_${date.getMilliseconds()}.jpg`;
+                    saveButtonObject.setAttribute('download', filename);
+                    saveButtonObject.click();
                 } catch (e) {
                     console.error(e);
                 }
@@ -918,7 +918,7 @@
                 disable(scoreSlider);
                 disable(iouSlider);
 
-                window.stop();
+                hide(viewContainer);
 
                 if (streamPreviewController) {
                     streamPreviewController.abort();
@@ -1449,6 +1449,7 @@
                 }
             };
 
+            const frameImage = new Image();
             const streamPreviewHandler = async (responseResult) => {
                 try {
                     const code = responseResult['code'];
@@ -1460,6 +1461,8 @@
                     }
 
                     const frameCtx = responseResult['data']['image']
+                    frameImage.src = `data:image/jpeg;base64,${frameCtx}`;
+
                     streamPreviewFrame.onload = () => {
                         streamPreview.width = streamPreviewFrame.width;
                         streamPreview.height = streamPreviewFrame.height;
@@ -1478,7 +1481,7 @@
                         }
                     };
 
-                    streamPreviewFrame.src = `data:image/jpeg;base64,${frameCtx}`;
+                    streamPreviewFrame.src = frameImage.src;
                 } catch {
                     console.error('Failed to process response:', responseResult);
                 }
@@ -1488,6 +1491,8 @@
                 const response = await fetch(url, { signal });
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
+                let buffer = '';
+                let queue = [];
                 while (!signal.aborted) {
                     const { done, value } = await reader.read();
                     if (done) {
@@ -1499,8 +1504,16 @@
                     }
                     try {
                         const valueStr = decoder.decode(value);
-                        const responseResult = JSON.parse(valueStr);
-                        streamPreviewHandler(responseResult);
+                        const splits = valueStr.split('\r\n');
+                        buffer += splits.shift();
+                        if (splits.length > 0) {
+                            queue.push(buffer);
+                            buffer = splits.pop();
+                        }
+                        while (queue.length > 0) {
+                            const responseResult = JSON.parse(queue.shift());
+                            streamPreviewHandler(responseResult);
+                        }
                     } catch (error) {
                         console.error('Failed to parse response:', error);
                         continue;
@@ -1528,7 +1541,6 @@
 
                     isStreaming = true;
 
-                    streamView.src = `${streamUrl}/frame`; // TODO: depracate stream view
                     streamPreviewController = new AbortController();
                     streamPreviewReadableStream(`${streamUrl}/result`, { signal: streamPreviewController.signal });
                     show(viewContainer);
