@@ -1,0 +1,1710 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Grove Vision AI</title>
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background: #181818;
+            color: #efefef;
+            font-size: 16px;
+        }
+
+        h2 {
+            font-size: 18px;
+        }
+
+        section.main {
+            display: flex;
+        }
+
+        @keyframes pullDown {
+            0% {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+
+            50% {
+                transform: translateY(-5%);
+                opacity: 0.0;
+            }
+
+            100% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            0% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+
+            50% {
+                transform: translateY(-5%);
+                opacity: 0.0;
+            }
+
+            90% {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+
+            100% {
+                transform: translateY(0%);
+                opacity: 0;
+            }
+        }
+
+        @keyframes loading {
+            0% {
+                background-position: 150% 0;
+            }
+
+            100% {
+                background-position: -50% 0;
+            }
+        }
+
+        #set-action.loading {
+            pointer-events: none;
+            -webkit-user-select: none;
+            user-select: none;
+            background: linear-gradient(90deg, #a0a0a0 50%, #ffffff 80%, #a0a0a0 50%);
+            background-size: 200% 100%;
+            animation: loading 2s linear infinite;
+        }
+
+        #toggle-stream.loading {
+            pointer-events: none;
+            -webkit-user-select: none;
+            user-select: none;
+            background: linear-gradient(90deg, #8dc215 50%, #ffffff 80%, #8dc215 50%);
+            background-size: 200% 100%;
+            animation: loading 2s linear infinite;
+        }
+
+        #menu,
+        section.main {
+            flex-direction: column;
+        }
+
+        #menu {
+            display: none;
+            flex-wrap: nowrap;
+            min-width: 340px;
+            background: #363636;
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: -10px;
+        }
+
+        #content {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: stretch;
+            flex-direction: column;
+        }
+
+        div.text {
+            width: 100%;
+            max-width: 120px;
+            margin: 0;
+            padding: 0;
+        }
+
+        figure {
+            padding: 0px;
+            margin: 0;
+            -webkit-margin-before: 0;
+            margin-block-start: 0;
+            -webkit-margin-after: 0;
+            margin-block-end: 0;
+            -webkit-margin-start: 0;
+            margin-inline-start: 0;
+            -webkit-margin-end: 0;
+            margin-inline-end: 0;
+        }
+
+        figure img, figure canvas {
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            width: 100%;
+            height: auto;
+            border-radius: 4px;
+            margin-top: 8px;
+        }
+
+        @media (min-width: 800px) and (orientation: landscape) {
+            #content {
+                display: flex;
+                flex-wrap: nowrap;
+                align-items: stretch;
+                flex-direction: row;
+            }
+
+            figure img, figure canvas {
+                display: block;
+                max-width: 100%;
+                max-height: calc(100vh - 40px);
+                width: auto;
+                height: auto;
+            }
+
+            figure {
+                padding: 0 0 0 0px;
+                margin: 0;
+                -webkit-margin-before: 0;
+                margin-block-start: 0;
+                -webkit-margin-after: 0;
+                margin-block-end: 0;
+                -webkit-margin-start: 0;
+                margin-inline-start: 0;
+                -webkit-margin-end: 0;
+                margin-inline-end: 0;
+                margin-left: auto;
+                margin-right: auto;
+            }
+        }
+
+        section#buttons {
+            display: flex;
+            flex-wrap: nowrap;
+            justify-content: end;
+        }
+
+        #nav-toggle {
+            cursor: pointer;
+            display: block;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #nav-toggle-cb {
+            outline: 0;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        #nav-toggle-cb:checked+#menu {
+            display: flex;
+            animation: pullDown 0.3s forwards;
+        }
+
+        #nav-toggle-cb:not(:checked)+#menu {
+            display: flex;
+            animation: slideUp 0.3s forwards;
+        }
+        
+        #save-still-object {
+            display: none;
+        }
+
+        .input-group {
+            display: flex;
+            flex-wrap: nowrap;
+            line-height: 22px;
+            margin: 5px 0;
+        }
+
+        .input-group>label {
+            display: inline-block;
+            padding-right: 10px;
+            min-width: 47%;
+        }
+
+        .input-group input,
+        .input-group select,
+        .input-group span {
+            flex-grow: 1;
+        }
+
+        .range-max,
+        .range-min {
+            display: inline-block;
+            padding: 0 5px;
+        }
+
+        button,
+        .button {
+            display: block;
+            margin: 5px;
+            padding: 0 12px;
+            border: 0;
+            line-height: 28px;
+            cursor: pointer;
+            color: #fff;
+            background: #8dc215;
+            border-radius: 5px;
+            font-size: 16px;
+            outline: 0;
+        }
+
+        button:hover {
+            background: #9cd516;
+        }
+
+        button:active {
+            background: #8dc215;
+        }
+
+        button.disabled {
+            user-select: none;
+            pointer-events: none;
+            background: #a0a0a0;
+        }
+
+        label.disabled {
+            user-select: none;
+            pointer-events: none;
+            background: #606060;
+
+            &::before {
+                background-color: #808080;
+            }
+        }
+
+        input[type="range"].disabled {
+            user-select: none;
+            pointer-events: none;
+
+            &::-webkit-slider-runnable-track {
+                background: #808080;
+            }
+
+            &::-webkit-slider-thumb {
+                background: #a0a0a0;
+            }
+
+            &::-moz-range-track {
+                background: #808080;
+            }
+
+            &::-moz-range-thumb {
+                background: #a0a0a0;
+            }
+
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 22px;
+            background: #363636;
+            cursor: pointer;
+            margin: 0;
+        }
+
+        input[type="range"]:focus {
+            outline: 0;
+        }
+
+        input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 2px;
+            cursor: pointer;
+            background: #efefef;
+            border-radius: 0;
+            border: 0 solid #efefef;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            border: 1px solid rgba(0, 0, 30, 0);
+            height: 16px;
+            width: 16px;
+            border-radius: 35px;
+            background: #8dc215;
+            cursor: pointer;
+            -webkit-appearance: none;
+            margin-top: -8px;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            background: #9cd516;
+        }
+
+        input[type="range"]:focus::-webkit-slider-runnable-track {
+            background: #efefef;
+        }
+
+        input[type="range"]::-moz-range-track {
+            width: 100%;
+            height: 2px;
+            cursor: pointer;
+            background: #efefef;
+            border-radius: 0;
+            border: 0 solid #efefef;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            border: 1px solid rgba(0, 0, 30, 0);
+            height: 16px;
+            width: 16px;
+            border-radius: 35px;
+            background: #8dc215;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-moz-range-thumb:hover {
+            background: #9cd516;
+        }
+
+        input[type="range"]::-ms-track {
+            width: 100%;
+            height: 2px;
+            cursor: pointer;
+            background: 0 0;
+            border-color: transparent;
+            color: transparent;
+        }
+
+        input[type="range"]::-ms-fill-lower {
+            background: #efefef;
+            border: 0 solid #efefef;
+            border-radius: 0;
+        }
+
+        input[type="range"]::-ms-fill-upper {
+            background: #efefef;
+            border: 0 solid #efefef;
+            border-radius: 0;
+        }
+
+        input[type="range"]::-ms-thumb {
+            border: 1px solid rgba(0, 0, 30, 0);
+            height: 22px;
+            width: 22px;
+            border-radius: 50px;
+            background: #8dc215;
+            cursor: pointer;
+            height: 2px;
+        }
+
+        input[type="range"]:focus::-ms-fill-lower {
+            background: #efefef;
+        }
+
+        input[type="range"]:focus::-ms-fill-upper {
+            background: #363636;
+        }
+
+        .switch {
+            display: block;
+            position: relative;
+            margin-left: auto;
+            line-height: 22px;
+            font-size: 16px;
+            height: 22px;
+            margin-right: 5px;
+        }
+
+        .switch input {
+            outline: 0;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            width: 50px;
+            height: 22px;
+            border-radius: 22px;
+            cursor: pointer;
+            background-color: grey;
+        }
+
+        .slider,
+        .slider:before {
+            display: inline-block;
+            transition: 0.4s;
+        }
+
+        .slider:before {
+            position: relative;
+            content: "";
+            border-radius: 50%;
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            top: 3px;
+            background-color: #fff;
+        }
+
+        input:checked+.slider {
+            background-color: #8dc215;
+        }
+
+        input:checked+.slider:before {
+            -webkit-transform: translateX(26px);
+            transform: translateX(26px);
+        }
+
+        select {
+            border: 1px solid #363636;
+            font-size: 14px;
+            height: 22px;
+            outline: 0;
+            border-radius: 5px;
+            margin-right: 4px;
+            margin-left: 1px;
+        }
+
+        select.disabled {
+            user-select: none;
+            pointer-events: none;
+            background: #a0a0a0;
+        }
+
+        .image-container {
+            position: relative;
+            min-width: 160px;
+        }
+
+        .close {
+            position: absolute;
+            right: 5px;
+            top: 5px;
+            background: #8dc215;
+            width: 16px;
+            height: 16px;
+            border-radius: 100px;
+            color: #fff;
+            text-align: center;
+            line-height: 18px;
+            cursor: pointer;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .save {
+            position: absolute;
+            right: 25px;
+            top: 0px;
+            height: 16px;
+            line-height: 16px;
+            padding: 0 4px;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        input[type="text"] {
+            border: 1px solid #363636;
+            font-size: 14px;
+            height: 20px;
+            margin: 1px;
+            outline: 0;
+            max-width: 100%;
+            border-radius: 5px;
+        }
+
+        .inline-button {
+            line-height: 20px;
+            margin: 2px;
+            margin-right: 5px;
+            margin-left: auto;
+            padding: 1px 4px 2px 4px;
+        }
+
+        label.toggle-section-label {
+            cursor: pointer;
+            display: block;
+        }
+
+        input.toggle-section-button {
+            outline: 0;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        input.toggle-section-button:checked+section.toggle-section {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <section class="main">
+        <div id="logo">
+            <label for="nav-toggle-cb" id="nav-toggle">&#9776;&nbsp;&nbsp;Toggle settings</label>
+        </div>
+        <div id="content">
+            <div id="sidebar">
+                <input type="checkbox" id="nav-toggle-cb" checked="checked" />
+                <nav id="menu">
+
+                    <div class="input-group" id="framesize-group">
+                        <label for="framesize">Resolution</label>
+                        <select id="framesize" class="default-action">
+                            <option value="0">240x240</option>
+                            <option value="1">480x480</option>
+                            <option value="2">VGA(640x480)</option>
+                        </select>
+                    </div>
+                    <div class="input-group" id="set-action-group">
+                        <label for="set-action">Action</label>
+                        <div class="text">
+                            <input id="action" type="text" minlength="" maxlength="1024" size="" value="">
+                        </div>
+                        <button class="inline-button" id="set-action">Set</button>
+                    </div>
+                    <div class="input-group" id="score-group">
+                        <label for="score">Score Thresh</label>
+                        <div class="range-min">10</div>
+                        <input type="range" id="score" min="10" max="100" value="60" class="default-action disabled" />
+                        <div class="range-max">100</div>
+                    </div>
+                    <div class="input-group" id="iou-group">
+                        <label for="iou">Iou Thresh</label>
+                        <div class="range-min">0</div>
+                        <input type="range" id="iou" min="0" max="100" value="45" class="default-action disabled" />
+                        <div class="range-max">100</div>
+                    </div>
+
+                    <div class="input-group" id="sample-group">
+                        <label for="sample-only">Sample Only</label>
+                        <div class="switch">
+                            <input id="sample-only" type="checkbox" class="default-action" />
+                            <label class="slider sample-only-switch" for="sample-only"></label>
+                        </div>
+                    </div>
+
+                    <div class="input-group" id="differed-group">
+                        <label for="differed-by-results">Differed by Results</label>
+                        <div class="switch">
+                            <input id="differed-by-results" type="checkbox" class="default-action" />
+                            <label class="slider differed-by-results-switch" for="differed-by-results"></label>
+                        </div>
+                    </div>
+
+                    <section id="buttons">
+                        <a id="save-still-object"></a>
+                        <button id="save-still" class="disabled">Save Frame</button>
+                        <button id="toggle-stream">Start Stream</button>
+                    </section>
+                </nav>
+            </div>
+            <figure>
+                <div id="stream-container" class="image-container hidden">
+                    <canvas id="preview" crossorigin></canvas>
+                </div>
+            </figure>
+        </div>
+    </section>
+    <script>
+        // constants
+        const COLORS = [
+            '#FF0000',
+            '#FFA500',
+            '#FFFF00',
+            '#32CD32',
+            '#006400',
+            '#4169E1',
+            '#0000FF',
+            '#FF1493',
+            '#FFC0CB',
+            '#800080',
+            '#FFD700',
+            '#9ACD32',
+            '#ADFF2F',
+            '#00FFFF',
+            '#1E90FF',
+            '#FF4500',
+            '#CD853F',
+            '#FF8C00',
+            '#FF6347',
+            '#8B4513',
+            '#FF69B4',
+            '#FF00FF',
+            '#BA55D3',
+            '#9400D3',
+            '#8A2BE2',
+            '#4682B4',
+            '#87CEEB',
+            '#00CED1',
+            '#20B2AA',
+            '#FFB6C1',
+            '#696969',
+            '#808080',
+            '#A9A9A9',
+            '#C0C0C0',
+            '#D3D3D3',
+            '#FFFAFA',
+            '#F0FFF0',
+            '#F5F5DC',
+            '#FFE4C4',
+            '#FFDAB9',
+            '#EEE8AA',
+            '#F0E68C',
+            '#BDB76B',
+            '#FFD700',
+            '#F5DEB3',
+            '#D2B48C',
+            '#DEB887',
+            '#BC8F8F',
+            '#F4A460',
+            '#DAA520',
+            '#CD853F',
+            '#A52A2A',
+            '#8B4513',
+            '#D2691E',
+            '#B22222',
+            '#FF6347',
+            '#FF4500',
+            '#FF8C00',
+            '#FFA07A',
+            '#FA8072',
+            '#E9967A',
+            '#FF69B4',
+            '#FF1493',
+            '#DB7093',
+            '#C71585',
+        ];
+
+        // commnon types
+        const Mode = {
+            SAMPLE: 'SAMPLE',
+            INVOKE: 'INVOKE'
+        };
+
+        // shared variables
+        const baseHost = document.location.origin;
+        let isStreaming = false;
+        let workingMode = Mode.INVOKE;;
+        let modelInfo = null;
+
+        // init settings
+        async function initSettings() {
+            // async fetch resolution
+            let fetchResolution = async () => {
+                const cmd = 'SENSOR?';
+                const encodedCmd = btoa(cmd);
+
+                try {
+                    let response = await fetch(`${baseHost}/command?base64=${encodedCmd}`);
+                    const data = await response.json();
+
+                    const code = data['code'];
+                    if (code != 0) {
+                        throw new Error(data);
+                    }
+                    const value = data['data']['opt_id'];
+
+                    // active item in its value is equal to the value
+                    let resolutionList = document.getElementById('framesize');
+                    for (let i = 0; i < resolutionList.options.length; i++) {
+                        if (resolutionList.options[i].value == value) {
+                            resolutionList.options[i].selected = true;
+                            break;
+                        }
+                    }
+
+                    return true;
+                } catch (error) {
+                    console.error('Failed to fetch resolution:', error);
+                }
+
+                return false;
+            }
+
+            // async fetch action
+            let fetchAction = async () => {
+                const cmd = 'ACTION?';
+                const encodedCmd = btoa(cmd);
+
+                try {
+                    let response = await fetch(`${baseHost}/command?base64=${encodedCmd}`);
+                    const data = await response.json();
+
+                    const code = data['code'];
+                    if (code != 0) {
+                        throw new Error(data);
+                    }
+
+                    const value = data['data']['action'];
+                    let action = document.getElementById('action');
+                    action.value = value;
+
+                    return true;
+                } catch (error) {
+                    console.error('Failed to fetch action:', error);
+                }
+
+                return false;
+            }
+
+            await fetchResolution();
+            await fetchAction();
+        }
+
+        document.addEventListener('DOMContentLoaded', async function (event) {
+
+            initSettings();
+
+            const hide = el => {
+                el.classList.add('hidden')
+            }
+            const show = el => {
+                el.classList.remove('hidden')
+            }
+
+            const disable = el => {
+                el.classList.add('disabled')
+                el.disabled = true
+            }
+
+            const enable = el => {
+                el.classList.remove('disabled')
+                el.disabled = false
+            }
+
+
+            const baseHost = document.location.origin;
+            const streamUrl = baseHost + ':8080/stream';
+
+            const viewContainer = document.getElementById('stream-container');
+            const streamPreview = document.getElementById('preview');
+
+            const resolutionSelect = document.getElementById('framesize');
+
+            const setActionButton = document.getElementById('set-action');
+            const saveButton = document.getElementById('save-still');
+            const streamButton = document.getElementById('toggle-stream');
+
+            const saveButtonObject = document.getElementById('save-still-object');
+
+            const scoreSlider = document.getElementById('score');
+            const iouSlider = document.getElementById('iou');
+
+            const sampleOnly = document.getElementById('sample-only');
+            const sampleSwitch = document.querySelector('.sample-only-switch');
+            const differedByResults = document.getElementById('differed-by-results');
+            const differedSwitch = document.querySelector('.differed-by-results-switch');
+
+            let streamPreviewController = null;
+
+            const streamPreviewCtx = streamPreview.getContext('2d');
+            const streamPreviewFrame = new Image();
+
+            setActionButton.onclick = async () => {
+                setActionButton.classList.add('loading')
+
+                const action = document.getElementById('action').value;
+                const cmd = `ACTION="${action}"`;
+                const encodedCmd = btoa(cmd);
+
+                try {
+                    await fetch(`${baseHost}/command?base64=${encodedCmd}`).then(async (response) => {
+                        try {
+                            const data = await response.json();
+                            const code = data['code'];
+                            if (code != 0) {
+                                throw new Error(code);
+                            }
+                        } catch (error) {
+                            console.error('Failed to set action:', error);
+                            alert('Device reported failed to set action:' + error);
+                        }
+                    });
+                } catch (e) {
+                    console.error('Failed to set action:', e);
+                    alert('Failed to establish connection to the device, please check the network connection');
+                }
+
+                setActionButton.classList.remove('loading');
+            }
+
+            saveButton.onclick = () => {
+                try {
+                    const dataURL = streamPreview.toDataURL('image/jpeg');
+                    saveButtonObject.setAttribute('href', dataURL);
+                    const date = new Date();
+                    const filename = `${date.getFullYear()}_${date.getMonth() + 1}_${date.getDate()}_${date.getHours()}_${date.getMinutes()}_${date.getSeconds()}_${date.getMilliseconds()}.jpg`;
+                    saveButtonObject.setAttribute('download', filename);
+                    saveButtonObject.click();
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+
+            let isScoreSynchronizing = false;
+            const syncScore = async (target) => {
+                do {
+                    const cmd = `TSCORE=${target}`;
+                    const encodedCmd = btoa(cmd);
+                    try {
+                        target = await fetch(`${baseHost}/command?base64=${encodedCmd}`).then(async (response) => {
+                            try {
+                                const data = await response.json();
+                                const code = data['code'];
+                                if (code != 0) {
+                                    throw new Error(code);
+                                }
+                                return target;
+                            } catch (error) {
+                                console.error('Failed to set score:', error);
+                                return -1;
+                            }
+                        });
+                    } catch (e) {
+                        console.error('Failed to set score:', e);
+                    };
+                    let current = scoreSlider.value;
+                    if (current == target) {
+                        isScoreSynchronizing = false;
+                        break;
+                    }
+                    target = current;
+                } while (isStreaming);
+            };
+
+            scoreSlider.oninput = () => {
+                if (isScoreSynchronizing) {
+                    return;
+                }
+                isScoreSynchronizing = true;
+                syncScore(scoreSlider.value);
+            };
+
+            let isIouSynchronizing = false;
+            const syncIou = async (target) => {
+                do {
+                    const cmd = `TIOU=${target}`;
+                    const encodedCmd = btoa(cmd);
+                    try {
+                        target = await fetch(`${baseHost}/command?base64=${encodedCmd}`).then(async (response) => {
+                            try {
+                                const data = await response.json();
+                                const code = data['code'];
+                                if (code != 0) {
+                                    throw new Error(code);
+                                }
+                                return target;
+                            } catch (error) {
+                                console.error('Failed to set iou:', error);
+                                return -1;
+                            }
+                        });
+                    } catch (e) {
+                        console.error('Failed to set iou:', e);
+                    };
+                    let current = iouSlider.value;
+                    if (current == target) {
+                        isIouSynchronizing = false;
+                        break;
+                    }
+                    target = current;
+                } while (isStreaming);
+            };
+
+            iouSlider.oninput = () => {
+                if (isIouSynchronizing) {
+                    return;
+                }
+                isIouSynchronizing = true;
+                syncIou(iouSlider.value);
+            };
+
+            const stopStream = async () => {
+                disable(saveButton);
+                disable(scoreSlider);
+                disable(iouSlider);
+
+                hide(viewContainer);
+
+                if (streamPreviewController) {
+                    streamPreviewController.abort();
+                }
+                isStreaming = false;
+
+                await fetch((() => {
+                    const cmd = 'BREAK';
+                    const encodedCmd = btoa(cmd);
+                    return `${baseHost}/command?base64=${encodedCmd}`;
+                })()).then(async (response) => {
+                    try {
+                        const data = await response.json();
+                        const code = data['code'];
+                        if (code != 0) {
+                            throw new Error(data);
+                        }
+                    } catch (error) {
+                        console.error('Failed to stop stream:', error);
+                    }
+                });
+
+                streamButton.innerHTML = 'Start Stream';
+
+                enable(resolutionSelect);
+                enable(sampleSwitch);
+                enable(differedSwitch);
+            };
+
+            const visualizeBoundingBoxes = (boxes) => {
+                let classesMap = null;
+                if (modelInfo && modelInfo.hasOwnProperty('classes')) {
+                    classesMap = modelInfo['classes'];
+                }
+                for (let i = 0; i < boxes.length; i += 1) {
+                    const rect = boxes[i];
+                    if (rect.length < 6) {
+                        console.error('Bad bounding box:', rect);
+                        continue;
+                    }
+                    const x = rect[0];
+                    const y = rect[1];
+                    const w = rect[2];
+                    const h = rect[3];
+                    const score = rect[4];
+                    const target = rect[5];
+                    const id = rect.length > 6 ? rect[6] : -1;
+
+                    const color = COLORS[(target + id) % COLORS.length];
+                    let tag = id != -1 ? `#${id} ` : '';
+                    if (classesMap && target < classesMap.length) {
+                        tag += classesMap[target];
+                    } else {
+                        tag += target.toString();
+                    }
+                    streamPreviewCtx.strokeStyle = color;
+                    streamPreviewCtx.lineWidth = 2;
+                    streamPreviewCtx.strokeRect(x - w / 2, y - h / 2, w, h);
+                    streamPreviewCtx.fillStyle = color;
+                    streamPreviewCtx.fillRect(x - w / 2, y - h / 2 - 12, w, 12);
+                    streamPreviewCtx.font = 'bold 12px arial';
+                    streamPreviewCtx.fillStyle = '#ffffff';
+                    streamPreviewCtx.fillText(`${tag}: ${score}`, x - w / 2 + 5, y - h / 2 - 2);
+                }
+            };
+
+            const visualizeClasses = (classes) => {
+                let classesMap = null;
+                if (modelInfo && modelInfo.hasOwnProperty('classes')) {
+                    classesMap = modelInfo['classes'];
+                }
+                for (let i = 0; i < classes.length; i += 1) {
+                    const cls = classes[i];
+                    if (cls.length < 2) {
+                        console.error("Bad class:", cls);
+                        continue;
+                    }
+                    const score = cls[0];
+                    const target = cls[1];
+                    let tag = '';
+                    if (classesMap && target < classesMap.length) {
+                        tag += classesMap[target];
+                    } else {
+                        tag += target.toString();
+                    }
+                    streamPreviewCtx.globalAlpha = 0.3;
+                    streamPreviewCtx.fillStyle = COLORS[target % COLORS.length];
+                    streamPreviewCtx.fillRect(
+                        (canvas.value.width / classes.length) * i,
+                        0,
+                        (canvas.value.width / classes.length) * (i + 1),
+                        canvas.value.height / 10
+                    );
+                    streamPreviewCtx.globalAlpha = 1;
+                    streamPreviewCtx.font = `bold ${canvas.value.height / 16}px arial`;
+                    streamPreviewCtx.fillStyle = '#ffffff';
+                    streamPreviewCtx.fillText(
+                        `${tag}: ${score}`,
+                        (canvas.value.width / tagets.length) * i,
+                        canvas.value.height / 16
+                    );
+                }
+            };
+
+            const visualizeKeypoints = (keypoints) => {
+                let classesMap = null;
+                if (modelInfo && modelInfo.hasOwnProperty('classes')) {
+                    classesMap = modelInfo['classes'];
+                }
+                for (let i = 0; i < keypoints.length; i += 1) {
+                    const keypoint = keypoints[i];
+                    if (keypoint.length < 2) {
+                        console.error("Bad keypoint:", keypoint);
+                        continue;
+                    }
+                    const rect = keypoint[0];
+                    const points = keypoint[1];
+
+                    // draw bounding boxes
+                    {
+                        if (rect.length < 6) {
+                            console.error("Bad bounding box:", rect);
+                            continue;
+                        }
+                        const x = rect[0];
+                        const y = rect[1];
+                        const w = rect[2];
+                        const h = rect[3];
+                        const score = rect[4];
+                        const target = rect[5];
+                        const id = rect.length > 6 ? rect[6] : -1;
+
+                        const color = COLORS[(target + id) % COLORS.length];
+                        let tag = id != -1 ? `#${id} ` : '';
+                        if (classesMap && target < classesMap.length) {
+                            tag += classesMap[target];
+                        } else {
+                            tag += target.toString();
+                        }
+                        streamPreviewCtx.strokeStyle = color;
+                        streamPreviewCtx.lineWidth = 2;
+                        streamPreviewCtx.strokeRect(x - w / 2, y - h / 2, w, h);
+                        streamPreviewCtx.fillStyle = color;
+                        streamPreviewCtx.fillRect(x - w / 2, y - h / 2 - 12, w, 12);
+                        streamPreviewCtx.font = 'bold 12px arial';
+                        streamPreviewCtx.fillStyle = '#ffffff';
+                        streamPreviewCtx.fillText(`${tag}: ${score}`, x - w / 2 + 5, y - h / 2 - 2);
+                    }
+
+                    // fliter points
+                    const pointSet = new Set();
+                    for (let j = 0; j < points.length; j += 1) {
+                        const point = points[j];
+                        if (point.length < 3) {
+                            console.error("Bad point:", point);
+                            continue;
+                        }
+                        const x = point[0];
+                        const y = point[1];
+                        const target = point[3];
+
+                        // draw if point in the box
+                        if (x > rect[0] - rect[2] / 2 &&
+                            x < rect[0] + rect[2] / 2 &&
+                            y > rect[1] - rect[3] / 2 &&
+                            y < rect[1] + rect[3] / 2) {
+                            pointSet.add(target);
+                        }
+                    }
+
+                    // human pose with 17 points
+                    if (points.length == 17) {
+                        streamPreviewCtx.lineWidth = 2;
+
+                        // nose to left eye
+                        if (pointSet.has(0) && pointSet.has(1)) {
+                            streamPreviewCtx.strokeStyle = COLORS[0];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[0][0], points[0][1]);
+                            streamPreviewCtx.lineTo(points[1][0], points[1][1]);
+                            streamPreviewCtx.stroke();
+                        }
+
+                        // nose to right eye
+                        if (pointSet.has(0) && pointSet.has(2)) {
+                            streamPreviewCtx.strokeStyle = COLORS[0];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[0][0], points[0][1]);
+                            streamPreviewCtx.lineTo(points[2][0], points[2][1]);
+                            streamPreviewCtx.stroke();
+                        }
+
+                        // left eye to left ear
+                        if (pointSet.has(1) && pointSet.has(3)) {
+                            streamPreviewCtx.strokeStyle = COLORS[0];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[1][0], points[1][1]);
+                            streamPreviewCtx.lineTo(points[3][0], points[3][1]);
+                            streamPreviewCtx.stroke();
+                        }
+
+                        // right eye to right ear
+                        if (pointSet.has(2) && pointSet.has(4)) {
+                            streamPreviewCtx.strokeStyle = COLORS[0];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[2][0], points[2][1]);
+                            streamPreviewCtx.lineTo(points[4][0], points[4][1]);
+                            streamPreviewCtx.stroke();
+                        }
+
+                        // left ear to left shoulder
+                        if (pointSet.has(3) && pointSet.has(5)) {
+                            streamPreviewCtx.strokeStyle = COLORS[0];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[3][0], points[3][1]);
+                            streamPreviewCtx.lineTo(points[5][0], points[5][1]);
+                            streamPreviewCtx.stroke();
+                        }
+
+                        // right ear to right shoulder
+                        if (pointSet.has(4) && pointSet.has(6)) {
+                            streamPreviewCtx.strokeStyle = COLORS[0];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[4][0], points[4][1]);
+                            streamPreviewCtx.lineTo(points[6][0], points[6][1]);
+                            streamPreviewCtx.stroke();
+                        }
+
+                        // left shoulder to right shoulder
+                        if (pointSet.has(5) && pointSet.has(6)) {
+                            streamPreviewCtx.strokeStyle = COLORS[1];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[5][0], points[5][1]);
+                            streamPreviewCtx.lineTo(points[6][0], points[6][1]);
+                            streamPreviewCtx.stroke();
+                        }
+
+                        // left shoulder to left hip
+                        if (pointSet.has(5) && pointSet.has(11)) {
+                            streamPreviewCtx.strokeStyle = COLORS[2];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[5][0], points[5][1]);
+                            streamPreviewCtx.lineTo(points[11][0], points[11][1]);
+                            streamPreviewCtx.stroke();
+                        }
+
+                        // right shoulder to right hip
+                        if (pointSet.has(6) && pointSet.has(12)) {
+                            streamPreviewCtx.strokeStyle = COLORS[2];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[6][0], points[6][1]);
+                            streamPreviewCtx.lineTo(points[12][0], points[12][1]);
+                            streamPreviewCtx.stroke();
+                        }
+
+                        // left hip to right hip
+                        if (pointSet.has(11) && pointSet.has(12)) {
+                            streamPreviewCtx.strokeStyle = COLORS[2];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[11][0], points[11][1]);
+                            streamPreviewCtx.lineTo(points[12][0], points[12][1]);
+                            streamPreviewCtx.stroke();
+                        }
+
+                        // left shoulder to left elbow
+                        if (pointSet.has(5) && pointSet.has(7)) {
+                            streamPreviewCtx.strokeStyle = COLORS[1];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[5][0], points[5][1]);
+                            streamPreviewCtx.lineTo(points[7][0], points[7][1]);
+                            streamPreviewCtx.stroke();
+                        }
+
+                        // left elbow to left wrist
+                        if (pointSet.has(7) && pointSet.has(9)) {
+                            streamPreviewCtx.strokeStyle = COLORS[1];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[7][0], points[7][1]);
+                            streamPreviewCtx.lineTo(points[9][0], points[9][1]);
+                            streamPreviewCtx.stroke();
+                        }
+
+                        // right shoulder to right elbow
+                        if (pointSet.has(6) && pointSet.has(8)) {
+                            streamPreviewCtx.strokeStyle = COLORS[1];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[6][0], points[6][1]);
+                            streamPreviewCtx.lineTo(points[8][0], points[8][1]);
+                            streamPreviewCtx.stroke();
+                        }
+
+                        // right elbow to right wrist
+                        if (pointSet.has(8) && pointSet.has(10)) {
+                            streamPreviewCtx.strokeStyle = COLORS[1];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[8][0], points[8][1]);
+                            streamPreviewCtx.lineTo(points[10][0], points[10][1]);
+                            streamPreviewCtx.stroke();
+                        }
+
+                        // left hip to left knee
+                        if (pointSet.has(11) && pointSet.has(13)) {
+                            streamPreviewCtx.strokeStyle = COLORS[3];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[11][0], points[11][1]);
+                            streamPreviewCtx.lineTo(points[13][0], points[13][1]);
+                            streamPreviewCtx.stroke();
+                        }
+
+                        // left knee to left ankle
+                        if (pointSet.has(13) && pointSet.has(15)) {
+                            streamPreviewCtx.strokeStyle = COLORS[3];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[13][0], points[13][1]);
+                            streamPreviewCtx.lineTo(points[15][0], points[15][1]);
+                            streamPreviewCtx.stroke();
+                        }
+
+                        // right hip to right knee
+                        if (pointSet.has(12) && pointSet.has(14)) {
+                            streamPreviewCtx.strokeStyle = COLORS[3];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[12][0], points[12][1]);
+                            streamPreviewCtx.lineTo(points[14][0], points[14][1]);
+                            streamPreviewCtx.stroke();
+                        }
+
+                        // right knee to right ankle
+                        if (pointSet.has(14) && pointSet.has(16)) {
+                            streamPreviewCtx.strokeStyle = COLORS[3];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[14][0], points[14][1]);
+                            streamPreviewCtx.lineTo(points[16][0], points[16][1]);
+                            streamPreviewCtx.stroke();
+                        }
+                    }
+
+                    // hand 21 points
+                    else if (points.length == 21) {
+                        streamPreviewCtx.lineWidth = 2;
+
+                        // thumb
+                        if (pointSet.has(0) && pointSet.has(1)) {
+                            streamPreviewCtx.strokeStyle = COLORS[0];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[0][0], points[0][1]);
+                            streamPreviewCtx.lineTo(points[1][0], points[1][1]);
+                            streamPreviewCtx.stroke();
+                        }
+
+                        if (pointSet.has(1) && pointSet.has(2)) {
+                            streamPreviewCtx.strokeStyle = COLORS[0];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[1][0], points[1][1]);
+                            streamPreviewCtx.lineTo(points[2][0], points[2][1]);
+                            streamPreviewCtx.stroke();
+                        }
+
+                        if (pointSet.has(2) && pointSet.has(3)) {
+                            streamPreviewCtx.strokeStyle = COLORS[0];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[2][0], points[2][1]);
+                            streamPreviewCtx.lineTo(points[3][0], points[3][1]);
+                            streamPreviewCtx.stroke();
+                        }
+
+                        if (pointSet.has(3) && pointSet.has(4)) {
+                            streamPreviewCtx.strokeStyle = COLORS[0];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[3][0], points[3][1]);
+                            streamPreviewCtx.lineTo(points[4][0], points[4][1]);
+                            streamPreviewCtx.stroke();
+                        }
+
+                        // index finger
+                        if (pointSet.has(0) && pointSet.has(5)) {
+                            streamPreviewCtx.strokeStyle = COLORS[1];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[0][0], points[0][1]);
+                            streamPreviewCtx.lineTo(points[5][0], points[5][1]);
+                            streamPreviewCtx.stroke();
+                        }
+
+                        if (pointSet.has(5) && pointSet.has(6)) {
+                            streamPreviewCtx.strokeStyle = COLORS[1];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[5][0], points[5][1]);
+                            streamPreviewCtx.lineTo(points[6][0], points[6][1]);
+                            streamPreviewCtx.stroke();
+                        }
+
+                        if (pointSet.has(6) && pointSet.has(7)) {
+                            streamPreviewCtx.strokeStyle = COLORS[1];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[6][0], points[6][1]);
+                            streamPreviewCtx.lineTo(points[7][0], points[7][1]);
+                            streamPreviewCtx.stroke();
+                        }
+
+                        if (pointSet.has(7) && pointSet.has(8)) {
+                            streamPreviewCtx.strokeStyle = COLORS[1];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[7][0], points[7][1]);
+                            streamPreviewCtx.lineTo(points[8][0], points[8][1]);
+                            streamPreviewCtx.stroke();
+                        }
+
+                        // middle finger
+                        if (pointSet.has(5) && pointSet.has(9)) {
+                            streamPreviewCtx.strokeStyle = COLORS[5];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[5][0], points[5][1]);
+                            streamPreviewCtx.lineTo(points[9][0], points[9][1]);
+                            streamPreviewCtx.stroke();
+                        }
+
+                        if (pointSet.has(9) && pointSet.has(10)) {
+                            streamPreviewCtx.strokeStyle = COLORS[2];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[9][0], points[9][1]);
+                            streamPreviewCtx.lineTo(points[10][0], points[10][1]);
+                            streamPreviewCtx.stroke();
+                        }
+
+                        if (pointSet.has(10) && pointSet.has(11)) {
+                            streamPreviewCtx.strokeStyle = COLORS[2];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[10][0], points[10][1]);
+                            streamPreviewCtx.lineTo(points[11][0], points[11][1]);
+                            streamPreviewCtx.stroke();
+                        }
+
+                        if (pointSet.has(11) && pointSet.has(12)) {
+                            streamPreviewCtx.strokeStyle = COLORS[2];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[11][0], points[11][1]);
+                            streamPreviewCtx.lineTo(points[12][0], points[12][1]);
+                            streamPreviewCtx.stroke();
+                        }
+
+                        // ring finger
+                        if (pointSet.has(9) && pointSet.has(13)) {
+                            streamPreviewCtx.strokeStyle = COLORS[5];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[9][0], points[9][1]);
+                            streamPreviewCtx.lineTo(points[13][0], points[13][1]);
+                            streamPreviewCtx.stroke();
+                        }
+
+                        if (pointSet.has(13) && pointSet.has(14)) {
+                            streamPreviewCtx.strokeStyle = COLORS[3];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[13][0], points[13][1]);
+                            streamPreviewCtx.lineTo(points[14][0], points[14][1]);
+                            streamPreviewCtx.stroke();
+                        }
+
+                        if (pointSet.has(14) && pointSet.has(15)) {
+                            streamPreviewCtx.strokeStyle = COLORS[3];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[14][0], points[14][1]);
+                            streamPreviewCtx.lineTo(points[15][0], points[15][1]);
+                            streamPreviewCtx.stroke();
+                        }
+
+                        if (pointSet.has(15) && pointSet.has(16)) {
+                            streamPreviewCtx.strokeStyle = COLORS[3];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[15][0], points[15][1]);
+                            streamPreviewCtx.lineTo(points[16][0], points[16][1]);
+                            streamPreviewCtx.stroke();
+                        }
+
+                        // pinky
+                        if (pointSet.has(13) && pointSet.has(17)) {
+                            streamPreviewCtx.strokeStyle = COLORS[5];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[13][0], points[13][1]);
+                            streamPreviewCtx.lineTo(points[17][0], points[17][1]);
+                            streamPreviewCtx.stroke();
+                        }
+                        if (pointSet.has(0) && pointSet.has(17)) {
+                            streamPreviewCtx.strokeStyle = COLORS[4];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[0][0], points[0][1]);
+                            streamPreviewCtx.lineTo(points[17][0], points[17][1]);
+                            streamPreviewCtx.stroke();
+                        }
+
+                        if (pointSet.has(17) && pointSet.has(18)) {
+                            streamPreviewCtx.strokeStyle = COLORS[4];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[17][0], points[17][1]);
+                            streamPreviewCtx.lineTo(points[18][0], points[18][1]);
+                            streamPreviewCtx.stroke();
+                        }
+
+                        if (pointSet.has(18) && pointSet.has(19)) {
+                            streamPreviewCtx.strokeStyle = COLORS[4];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[18][0], points[18][1]);
+                            streamPreviewCtx.lineTo(points[19][0], points[19][1]);
+                            streamPreviewCtx.stroke();
+                        }
+
+                        if (pointSet.has(19) && pointSet.has(20)) {
+                            streamPreviewCtx.strokeStyle = COLORS[4];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.moveTo(points[19][0], points[19][1]);
+                            streamPreviewCtx.lineTo(points[20][0], points[20][1]);
+                            streamPreviewCtx.stroke();
+                        }
+                    }
+
+                    // draw points
+                    for (let j = 0; j < points.length; j += 1) {
+                        const point = points[j];
+                        const x = point[0];
+                        const y = point[1];
+                        const target = point[3];
+                        if (pointSet.has(target)) {
+                            streamPreviewCtx.fillStyle = COLORS[target % COLORS.length];
+                            streamPreviewCtx.beginPath();
+                            streamPreviewCtx.arc(x, y, 3, 0, 3 * Math.PI);
+                            streamPreviewCtx.fill();
+                        }
+                    }
+                }
+            };
+
+            const frameImage = new Image();
+            const streamPreviewHandler = async (responseResult) => {
+                try {
+                    const code = responseResult['code'];
+                    if (code != 0) {
+                        stopStream();
+                        console.error('Error device status on stream event:', code);
+                        alert('Error device status on stream event, please make sure the sensor is correctly connected to the device, code: ' + code.toString());
+                        return;
+                    }
+
+                    const frameCtx = responseResult['data']['image']
+                    frameImage.src = `data:image/jpeg;base64,${frameCtx}`;
+
+                    streamPreviewFrame.onload = () => {
+                        streamPreview.width = streamPreviewFrame.width;
+                        streamPreview.height = streamPreviewFrame.height;
+                        streamPreviewCtx.drawImage(streamPreviewFrame, 0, 0, streamPreviewFrame.width, streamPreviewFrame.height);
+
+                        if (responseResult['data'].hasOwnProperty('boxes')) {
+                            visualizeBoundingBoxes(responseResult['data']['boxes']);
+                        }
+
+                        if (responseResult['data'].hasOwnProperty('classes')) {
+                            visualizeClasses(responseResult['data']['classes']);
+                        }
+
+                        if (responseResult['data'].hasOwnProperty('keypoints')) {
+                            visualizeKeypoints(responseResult['data']['keypoints']);
+                        }
+                    };
+
+                    streamPreviewFrame.src = frameImage.src;
+                } catch {
+                    console.error('Failed to process response:', responseResult);
+                }
+            };
+
+            const streamPreviewReadableStream = async (url, { signal }) => {
+                const response = await fetch(url, { signal });
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                let queue = [];
+                while (!signal.aborted) {
+                    const { done, value } = await reader.read();
+                    if (done) {
+                        if (!signal.aborted && isStreaming) {
+                            stopStream();
+                            alert('Stream closed unexpectedly, please check your network connection or device status, then try again');
+                        }
+                        return;
+                    }
+                    try {
+                        const valueStr = decoder.decode(value);
+                        const splits = valueStr.split('\r\n');
+                        buffer += splits.shift();
+                        if (splits.length > 0) {
+                            queue.push(buffer);
+                            buffer = splits.pop();
+                        }
+                        while (queue.length > 0) {
+                            const responseResult = JSON.parse(queue.shift());
+                            streamPreviewHandler(responseResult);
+                        }
+                    } catch (error) {
+                        console.error('Failed to parse response:', error);
+                        continue;
+                    }
+                }
+            }
+
+            const startStreamTimeout = 5000;
+
+            const startStream = async () => {
+                disable(resolutionSelect);
+                disable(sampleSwitch);
+                disable(differedSwitch);
+
+                streamButton.classList.add('loading')
+                streamButton.innerHTML = "Starting Stream";
+
+                const startTimer = setTimeout(() => {
+                    onStartStreamFailure();
+                    alert('Start stream timeout, please check the internet connection, then try again');
+                }, startStreamTimeout);
+
+                const onStartStreamSuccess = () => {
+                    clearTimeout(startTimer);
+
+                    isStreaming = true;
+
+                    streamPreviewController = new AbortController();
+                    streamPreviewReadableStream(`${streamUrl}/result`, { signal: streamPreviewController.signal });
+                    show(viewContainer);
+
+                    enable(saveButton);
+
+                    streamButton.classList.remove('loading');
+                    streamButton.innerHTML = "Stop Stream";
+                }
+
+                const onStartStreamFailure = () => {
+                    clearTimeout(startTimer);
+
+                    if (streamPreviewController) {
+                        streamPreviewController.abort();
+                    }
+
+                    streamButton.classList.remove('loading');
+                    streamButton.innerHTML = "Start Stream";
+
+                    enable(resolutionSelect);
+                    enable(sampleSwitch);
+                    enable(differedSwitch);
+                }
+
+                // set resolution
+                let success = await fetch((() => {
+                    const sensorId = 1;
+                    const optId = resolutionSelect.options[resolutionSelect.selectedIndex].value;
+                    const cmd = `SENSOR=${sensorId},1,${optId}`;
+                    const encodedCmd = btoa(cmd);
+                    return `${baseHost}/command?base64=${encodedCmd}`;
+                })()).then(async (response) => {
+                    try {
+                        const data = await response.json();
+                        const code = data['code'];
+                        if (code != 0) {
+                            throw new Error(data);
+                        }
+                        return true;
+                    } catch (error) {
+                        onStartStreamFailure();
+
+                        console.error('Failed to set resolution:', error);
+                        alert('Failed to set resolution, please check the connection between your device and the camera sensor, then try again');
+                    }
+                    return false;
+                });
+
+                if (!success) {
+                    return;
+                }
+
+                // start stream
+                switch (workingMode) {
+                    case Mode.SAMPLE:
+                        fetch((() => {
+                            const cmd = 'SAMPLE=-1';
+                            const encodedCmd = btoa(cmd);
+                            return `${baseHost}/command?base64=${encodedCmd}`;
+                        })()).then(async (response) => {
+                            try {
+                                const data = await response.json();
+                                const code = data['code'];
+                                if (code != 0) {
+                                    throw new Error(data);
+                                }
+                                onStartStreamSuccess();
+                            } catch (error) {
+                                onStartStreamFailure();
+
+                                console.error('Failed to start stream:', error);
+                                alert('Failed to start stream, please check the connection between your device and the camera sensor, then try again');
+                            }
+                        });
+                        break;
+
+                    case Mode.INVOKE:
+                        // update the model info
+                        await fetch((() => {
+                            const cmd = 'INFO?';
+                            const encodedCmd = btoa(cmd);
+                            return `${baseHost}/command?base64=${encodedCmd}`;
+                        })()).then(async (response) => {
+                            try {
+                                const data = await response.json();
+                                const code = data['code'];
+                                if (code != 0) {
+                                    throw new Error(data);
+                                }
+                                modelInfo = JSON.parse(atob(data['data']['info']));
+                                console.log('Model info:', modelInfo);
+                            } catch (error) {
+                                console.error('Failed to fetch model info:', error);
+                            }
+                        });
+
+                        // start stream
+                        fetch((() => {
+                            const isDiffered = differedByResults.checked ? 1 : 0;
+                            const cmd = `INVOKE=-1,${isDiffered},0`;
+                            const encodedCmd = btoa(cmd);
+                            return `${baseHost}/command?base64=${encodedCmd}`;
+                        })()).then(async (response) => {
+                            try {
+                                const data = await response.json();
+                                const code = data['code'];
+                                if (code != 0) {
+                                    throw new Error(data);
+                                }
+                                const algorithmConfig = data['data']['algorithm']['config'];
+                                if (algorithmConfig.hasOwnProperty('tscore')) {
+                                    scoreSlider.value = algorithmConfig['tscore'];
+                                    enable(scoreSlider);
+                                }
+                                if (algorithmConfig.hasOwnProperty('tiou')) {
+                                    iouSlider.value = algorithmConfig['tiou'];
+                                    enable(iouSlider);
+                                }
+
+                                onStartStreamSuccess();
+                            } catch (error) {
+                                onStartStreamFailure();
+
+                                console.error('Failed to start stream:', error);
+                                alert('Failed to start stream, please check the connection between your device and the camera sensor, make sure the model valid, then try again');
+                            }
+                        });
+                };
+            };
+
+            streamButton.onclick = () => {
+                const streamEnabled = streamButton.innerHTML === "Stop Stream";
+                if (streamEnabled) {
+                    stopStream();
+                } else {
+                    startStream();
+                }
+            };
+
+            sampleOnly.onchange = () => {
+                if (sampleOnly.checked) {
+                    workingMode = Mode.SAMPLE;
+                    differedByResults.checked = false;
+                    disable(differedSwitch);
+
+                } else {
+                    workingMode = Mode.INVOKE;
+                    enable(differedSwitch);
+                }
+            };
+
+            differedByResults.onchange = () => {
+                if (differedByResults.checked) {
+                    workingMode = Mode.SAMPLE;
+                    sampleOnly.checked = false;
+                    disable(sampleSwitch);
+                } else {
+                    workingMode = Mode.INVOKE;
+                    enable(sampleSwitch);
+                }
+            };
+        });
+    </script>
+</body>
+
+</html>
