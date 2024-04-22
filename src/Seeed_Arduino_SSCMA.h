@@ -53,6 +53,7 @@
 #include <Wire.h>
 #include <SPI.h>
 #include <ArduinoJson.h>
+#include <functional>
 
 #define I2C_ADDRESS (0x62)
 

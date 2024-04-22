@@ -839,7 +839,7 @@ bool SSCMA::set_tx_buffer(uint32_t size)
     {
         this->tx_len = size;
     }
-    return this->tx_len != NULL;
+    return this->tx_buf != nullptr;
 }
 
 bool SSCMA::clean_actions()
@@ -852,6 +852,7 @@ bool SSCMA::clean_actions()
     {
         return CMD_OK;
     }
+    return CMD_ETIMEDOUT;
 }
 
 bool SSCMA::save_jpeg()
@@ -864,4 +865,5 @@ bool SSCMA::save_jpeg()
     {
         return CMD_OK;
     }
+    return CMD_ETIMEDOUT;
 }
