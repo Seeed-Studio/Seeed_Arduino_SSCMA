@@ -842,7 +842,7 @@ bool SSCMA::set_tx_buffer(uint32_t size)
     return this->tx_buf != nullptr;
 }
 
-bool SSCMA::clean_actions()
+int SSCMA::clean_actions()
 {
     char cmd[64] = {0};
     snprintf(cmd, sizeof(cmd), CMD_PREFIX "%s=\"\"" CMD_SUFFIX, CMD_AT_ACTION);
@@ -855,7 +855,7 @@ bool SSCMA::clean_actions()
     return CMD_ETIMEDOUT;
 }
 
-bool SSCMA::save_jpeg()
+int SSCMA::save_jpeg()
 {
     char cmd[64] = {0};
     snprintf(cmd, sizeof(cmd), CMD_PREFIX "%s=\"save_jpeg()\"" CMD_SUFFIX, CMD_AT_ACTION);

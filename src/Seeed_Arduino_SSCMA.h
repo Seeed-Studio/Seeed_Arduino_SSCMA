@@ -281,8 +281,8 @@ public:
     String info(bool cache = true);
 
     // actions
-    bool clean_actions();
-    bool save_jpeg();
+    int clean_actions();
+    int save_jpeg();
 
     String last_image() { return _image; }
 
