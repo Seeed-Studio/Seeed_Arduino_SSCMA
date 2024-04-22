@@ -855,6 +855,18 @@ bool SSCMA::clean_actions()
     return CMD_ETIMEDOUT;
 }
 
+bool SSCMA::clean_actions()
+{
+    char cmd[64] = {0};
+    snprintf(cmd, sizeof(cmd), CMD_PREFIX "%s=\"\"" CMD_SUFFIX, CMD_AT_ACTION);
+
+    write(cmd, strlen(cmd));
+    if (wait(CMD_TYPE_RESPONSE, CMD_AT_ACTION) == CMD_OK)
+    {
+        return CMD_OK;
+    }
+}
+
 bool SSCMA::save_jpeg()
 {
     char cmd[64] = {0};
