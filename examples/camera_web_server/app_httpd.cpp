@@ -147,9 +147,6 @@ void startRemoteProxy(Proto through = PROTO_UART) {
     default:
         assert(false && "Unknown proto...");
     }
-
-    const char* cmd = CMD_PREFIX "INVOKE=-1,0,0" CMD_SUFFIX;
-    AI.write(cmd, strlen(cmd));
 }
 
 inline uint16_t getMsgType(const char* resp, size_t len) {
@@ -592,7 +589,8 @@ static esp_err_t stream_result_handler(httpd_req_t* req) {
 
         switch (slot->type) {
         case MSG_TYPE_EVENT | CMD_TYPE_SAMPLE: {
-            res = httpd_resp_send(req, (const char*)slot->data, slot->size);
+            res |= httpd_resp_send_chunk(req, (const char*)slot->data, slot->size);
+            res |= httpd_resp_send_chunk(req, MSG_TERMI_STR, strlen(MSG_TERMI_STR));
             break;
         }
 
@@ -706,7 +704,7 @@ static esp_err_t stream_result_handler(httpd_req_t* req) {
                 rsp_buf[len] = MSG_TERMI_STR[i];
             }
             rsp_buf[len] = '\0';
-            res          = httpd_resp_send(req, rsp_buf, len);
+            res          = httpd_resp_send_chunk(req, rsp_buf, len);
 
             break;
         }
