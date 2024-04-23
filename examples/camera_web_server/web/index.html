@@ -913,6 +913,14 @@
                 syncIou(iouSlider.value);
             };
 
+            const traceLimit = 15;
+            let   traceMap = {};
+            let   traceStamp = 0;
+
+            const clearTraceMap = () => {
+                traceMap = {};
+            };
+
             const stopStream = async () => {
                 disable(saveButton);
                 disable(scoreSlider);
@@ -924,6 +932,8 @@
                     streamPreviewController.abort();
                 }
                 isStreaming = false;
+
+                clearTraceMap();
 
                 await fetch((() => {
                     const cmd = 'BREAK';
@@ -946,6 +956,50 @@
                 enable(resolutionSelect);
                 enable(sampleSwitch);
                 enable(differedSwitch);
+            };
+
+            const removeStaledTraces = () => {
+                for (const id in traceMap) {
+                    if (traceMap[id]['stamp'] != traceStamp) {
+                        delete traceMap[id];
+                    }
+                }
+                traceStamp += 1;
+            };
+
+            const plotTrace = async(id, pt_x, pt_y, color) => {
+                if (id == -1) {
+                    return;
+                }
+                try {
+                    if (traceMap.hasOwnProperty(id)) {
+                        const trace = traceMap[id];
+                        trace['pts'].push([pt_x, pt_y]);
+                        while (trace['pts'].length > traceLimit) {
+                            trace['pts'].shift();
+                        }
+                        trace['stamp'] = traceStamp;
+                    } else {
+                        traceMap[id] = {
+                            'stamp': traceStamp,
+                            'pts': [[pt_x, pt_y]]
+                        };
+                    }
+
+                    // draw trace line between every 2 points
+                    streamPreviewCtx.strokeStyle = color;
+                    streamPreviewCtx.lineWidth = 1.5;
+                    streamPreviewCtx.beginPath();
+                    for (let i = 1; i < traceMap[id]['pts'].length; i += 1) {
+                        const pt = traceMap[id]['pts'][i];
+                        const pt_prev = traceMap[id]['pts'][i - 1];
+                        streamPreviewCtx.moveTo(pt_prev[0], pt_prev[1]);
+                        streamPreviewCtx.lineTo(pt[0], pt[1]);
+                    }
+                    streamPreviewCtx.stroke();
+                } catch (e) {
+                    console.error('Failed to plot trace:', e);
+                }
             };
 
             const visualizeBoundingBoxes = (boxes) => {
@@ -982,7 +1036,11 @@
                     streamPreviewCtx.font = 'bold 12px arial';
                     streamPreviewCtx.fillStyle = '#ffffff';
                     streamPreviewCtx.fillText(`${tag}: ${score}`, x - w / 2 + 5, y - h / 2 - 2);
+
+                    plotTrace(id, x, y, color);
                 }
+
+                removeStaledTraces();
             };
 
             const visualizeClasses = (classes) => {
@@ -1488,7 +1546,7 @@
             };
 
             const streamPreviewReadableStream = async (url, { signal }) => {
-                const response = await fetch(url, { signal });
+                const response = await fetch(url, { cache: 'no-cache', signal:signal });
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
                 let buffer = '';
