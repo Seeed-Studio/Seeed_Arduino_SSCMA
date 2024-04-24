@@ -1,0 +1,55 @@
+#######################################
+# Syntax Coloring Map For WiFi
+#######################################
+
+#######################################
+# Library (KEYWORD3)
+#######################################
+
+WiFi	KEYWORD3
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+WiFi	KEYWORD1
+rpcWiFi	KEYWORD1
+WiFiClient	KEYWORD1
+WiFiServer	KEYWORD1
+WiFiUDP	KEYWORD1
+WiFiClientSecure	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+available	KEYWORD2
+begin	KEYWORD2
+invoke  KEYWORD2
+read    KEYWORD2
+write   KEYWORD2
+reset   KEYWORD2
+fetch   KEYWORD2
+clean_actions   KEYWORD2
+save_jpeg   KEYWORD2
+set_rx_buffer   KEYWORD2
+set_tx_buffer   KEYWORD2
+
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+AI	LITERAL1
+WIFIVER LITERAL1
+WIFI    LITERAL1
+MQTT    LITERAL1
+WIFISTA LITERAL1
+MQTTSTA LITERAL1
+ID  LITERAL1
+name    LITERAL1
+boxes   LITERAL1
+classes LITERAL1
+points  LITERAL1
+perf    LITERAL1
+keypoints   LITERAL1
+last_image  LITERAL1
