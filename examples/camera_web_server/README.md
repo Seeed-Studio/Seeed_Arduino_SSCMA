@@ -19,6 +19,8 @@ Hardware:
 - Espressif Arduino capble MCU board that supports Wi-Fi, e.g. [XIAO (ESP32)](https://www.seeedstudio.com/XIAO-ESP32S3-p-5627.html)
 - Router
 
+**Note: Due to hardware resource constraints, bytetrack is only available when running server on ESP32-S3, and we also recommand you to use the device which has more than 512KB SRAM when the streaming resolution is greater than 240x240.*
+
 ## Getting Started
 
 1. Install the required libraries in Arduino IDE.
