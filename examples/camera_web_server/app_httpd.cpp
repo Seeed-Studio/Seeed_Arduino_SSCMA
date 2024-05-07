@@ -45,23 +45,39 @@
 #define RESULT_TIMEOUT_MS 3000
 #define CMD_TIMEOUT_MS    3000
 
-#define PTR_BUFFER_SIZE   8
-#define RSP_BUFFER_SIZE   (1024 * 196)
-#define JPG_BUFFER_SIZE   (1024 * 128)
-#define RST_BUFFER_SIZE   (1024 * 128)
-#define QRY_BUFFER_SIZE   (1024 * 16)
-#define CMD_BUFFER_SIZE   (1024 * 12)
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
+    #define PTR_BUFFER_SIZE     8
+    #define COM_BUFFER_SIZE     (1024 * 128)
+    #define RSP_BUFFER_SIZE     (1024 * 196)
+    #define JPG_BUFFER_SIZE     (1024 * 128)
+    #define RST_BUFFER_SIZE     (1024 * 64)
+    #define QRY_BUFFER_SIZE     (1024 * 16)
+    #define CMD_BUFFER_SIZE     (1024 * 12)
 
-#define CMD_TAG_FMT_STR   "HTTPD%.8X@"
-#define CMD_TAG_SIZE      snprintf(NULL, 0, CMD_TAG_FMT_STR, 0)
+    #define BYTE_TRACKE_ENABLED 1
+#else
+    #warning "Server may not work properly due to resource constraints..."
+    #define PTR_BUFFER_SIZE     3
+    #define COM_BUFFER_SIZE     (1024 * 32)
+    #define RSP_BUFFER_SIZE     (1024 * 32)
+    #define JPG_BUFFER_SIZE     (1024 * 32)
+    #define RST_BUFFER_SIZE     (1024 * 4)
+    #define QRY_BUFFER_SIZE     (1024 * 4)
+    #define CMD_BUFFER_SIZE     (1024 * 4)
 
-#define MSG_IMAGE_KEY     "\"image\": "
-#define MSG_COMMA_STR     ", "
-#define MSG_QUOTE_STR     "\""
-#define MSG_REPLY_STR     "\"type\": 0"
-#define MSG_EVENT_STR     "\"type\": 1"
-#define MSG_LOGGI_STR     "\"type\": 2"
-#define MSG_TERMI_STR     "\r\n"
+    #define BYTE_TRACKE_ENABLED 0
+#endif
+
+#define CMD_TAG_FMT_STR "HTTPD%.8X@"
+#define CMD_TAG_SIZE    snprintf(NULL, 0, CMD_TAG_FMT_STR, 0)
+
+#define MSG_IMAGE_KEY   "\"image\": "
+#define MSG_COMMA_STR   ", "
+#define MSG_QUOTE_STR   "\""
+#define MSG_REPLY_STR   "\"type\": 0"
+#define MSG_EVENT_STR   "\"type\": 1"
+#define MSG_LOGGI_STR   "\"type\": 2"
+#define MSG_TERMI_STR   "\r\n"
 
 enum MsgType : uint16_t {
     MSG_TYPE_UNKNOWN = 0,
@@ -123,18 +139,18 @@ void startRemoteProxy(Proto through = PROTO_UART) {
         // we cannot set the buffer size larger than uint16_t max value
         // a workaround is to modify uartBegin() in
         //     esp32/hardware/esp32/2.0.14/cores/esp32/esp32-hal-uart.c
-        atSerial.setRxBufferSize(128 * 1024);
+        atSerial.setRxBufferSize(COM_BUFFER_SIZE);
         atSerial.begin(921600);
 #else
     #define atSerial Serial1
-        atSerial.setRxBufferSize(128 * 1024);
+        atSerial.setRxBufferSize(COM_BUFFER_SIZE);
         atSerial.begin(921600);
 #endif
         AI.begin(&atSerial, D3);
         break;
     }
     case PROTO_I2C: {
-        Wire.setBufferSize(128 * 1024);
+        Wire.setBufferSize(COM_BUFFER_SIZE);
         Wire.begin();
         AI.begin(&Wire, D3);
         break;
@@ -331,7 +347,7 @@ static esp_err_t results_handler(httpd_req_t* req) {
         }
 
         if (!slot) {
-            vTaskDelay(10 / portTICK_PERIOD_MS);
+            vTaskDelay(5 / portTICK_PERIOD_MS);
             continue;
         }
 
@@ -462,7 +478,7 @@ static esp_err_t stream_frame_handler(httpd_req_t* req) {
             }
 
             if (!slot) {
-                vTaskDelay(10 / portTICK_PERIOD_MS);
+                vTaskDelay(5 / portTICK_PERIOD_MS);
                 continue;
             }
         }
@@ -470,7 +486,7 @@ static esp_err_t stream_frame_handler(httpd_req_t* req) {
         const char* slice = strnstr((const char*)slot->data, MSG_IMAGE_KEY MSG_QUOTE_STR, slot->size);
         if (slice == NULL) {
             log_w("No image data found...");
-            vTaskDelay(10 / portTICK_PERIOD_MS);
+            vTaskDelay(5 / portTICK_PERIOD_MS);
             continue;
         }
         size_t      offset = (slice - (const char*)slot->data) + strlen(MSG_IMAGE_KEY MSG_QUOTE_STR);
@@ -478,13 +494,13 @@ static esp_err_t stream_frame_handler(httpd_req_t* req) {
         const char* quote  = strnstr(data, MSG_QUOTE_STR, slot->size - offset);
         if (quote == NULL) {
             log_w("Invalid image data size...");
-            vTaskDelay(10 / portTICK_PERIOD_MS);
+            vTaskDelay(5 / portTICK_PERIOD_MS);
             continue;
         }
         size_t len = quote - data;
         if (len == 0) {
             log_w("Empty image data...");
-            vTaskDelay(10 / portTICK_PERIOD_MS);
+            vTaskDelay(5 / portTICK_PERIOD_MS);
             continue;
         }
 
@@ -493,7 +509,7 @@ static esp_err_t stream_frame_handler(httpd_req_t* req) {
         if (mbedtls_base64_decode(
               (unsigned char*)jpeg_buf, JPG_BUFFER_SIZE, &jpeg_size, (const unsigned char*)data, len) != 0) {
             log_e("Failed to decode image data...");
-            vTaskDelay(10 / portTICK_PERIOD_MS);
+            vTaskDelay(5 / portTICK_PERIOD_MS);
             continue;
         }
 
@@ -539,11 +555,13 @@ static esp_err_t stream_frame_handler(httpd_req_t* req) {
 }
 
 static esp_err_t stream_result_handler(httpd_req_t* req) {
-    esp_err_t                        res = ESP_OK;
+    esp_err_t     res     = ESP_OK;
+    static size_t last_id = 0;
+
+#if BYTE_TRACKE_ENABLED
     JsonDocument                     response;
     BYTETracker                      tracker;
     std::vector<BYTETracker::Object> boxes_list;
-    static size_t                    last_id = 0;
     static char*                     rsp_buf = NULL;
     if (rsp_buf == NULL) {
         rsp_buf = (char*)malloc(RSP_BUFFER_SIZE);
@@ -553,6 +571,7 @@ static esp_err_t stream_result_handler(httpd_req_t* req) {
             return ESP_ERR_NO_MEM;
         }
     }
+#endif
 
     res |= httpd_resp_set_status(req, HTTPD_200);
     res |= httpd_resp_set_type(req, "application/json");
@@ -583,7 +602,7 @@ static esp_err_t stream_result_handler(httpd_req_t* req) {
         }
 
         if (!slot) {
-            vTaskDelay(10 / portTICK_PERIOD_MS);
+            vTaskDelay(5 / portTICK_PERIOD_MS);
             continue;
         }
 
@@ -595,6 +614,11 @@ static esp_err_t stream_result_handler(httpd_req_t* req) {
         }
 
         case MSG_TYPE_EVENT | CMD_TYPE_INVOKE: {
+#if !BYTE_TRACKE_ENABLED
+            res |= httpd_resp_send_chunk(req, (const char*)slot->data, slot->size);
+            res |= httpd_resp_send_chunk(req, MSG_TERMI_STR, strlen(MSG_TERMI_STR));
+            break;
+#else
             response.clear();
             DeserializationError err = deserializeJson(response, (const char*)slot->data, slot->size);
             if (err != DeserializationError::Ok) {
@@ -707,6 +731,7 @@ static esp_err_t stream_result_handler(httpd_req_t* req) {
             res          = httpd_resp_send_chunk(req, rsp_buf, len);
 
             break;
+#endif
         }
 
         default:;
@@ -802,7 +827,7 @@ static esp_err_t command_handler(httpd_req_t* req) {
 
     TickType_t time_begin = xTaskGetTickCount();
     while ((xTaskGetTickCount() - time_begin) < (RESULT_TIMEOUT_MS / portTICK_PERIOD_MS)) {
-        vTaskDelay(10 / portTICK_PERIOD_MS);
+        vTaskDelay(5 / portTICK_PERIOD_MS);
 
         xSemaphoreTake(PB.mutex, portMAX_DELAY);
         auto slots = PB.slots;
@@ -854,7 +879,7 @@ static esp_err_t index_handler(httpd_req_t* req) {
 void startCameraServer() {
     httpd_config_t config   = HTTPD_DEFAULT_CONFIG();
     config.max_uri_handlers = 16;
-    config.stack_size       = 20480;
+    config.stack_size       = 10240;
 
     httpd_uri_t index_uri = {.uri      = "/",
                              .method   = HTTP_GET,
@@ -918,19 +943,35 @@ void startCameraServer() {
 
     ra_filter_init(&ra_filter, 20);
 
+    esp_err_t ret = ESP_OK;
+
     log_i("Starting web server on port: '%d'", config.server_port);
-    if (httpd_start(&web_httpd, &config) == ESP_OK) {
-        httpd_register_uri_handler(web_httpd, &index_uri);
-        httpd_register_uri_handler(web_httpd, &result_uri);
-        httpd_register_uri_handler(web_httpd, &command_uri);
+    if ((ret = httpd_start(&web_httpd, &config)) == ESP_OK) {
+        ret |= httpd_register_uri_handler(web_httpd, &index_uri);
+        ret |= httpd_register_uri_handler(web_httpd, &result_uri);
+        ret |= httpd_register_uri_handler(web_httpd, &command_uri);
+    }
+
+    if (ret != ESP_OK) {
+        log_e("Failed to start web server, code '0x%x' ...", ret);
+        while (true) {
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
+        }
     }
 
     config.server_port = 8080;
     config.ctrl_port   = 8080;
 
     log_i("Starting stream server on port: '%d'", config.server_port);
-    if (httpd_start(&stream_httpd, &config) == ESP_OK) {
-        httpd_register_uri_handler(stream_httpd, &stream_frame_uri);
-        httpd_register_uri_handler(stream_httpd, &stream_result_uri);
+    if ((ret = httpd_start(&stream_httpd, &config)) == ESP_OK) {
+        ret |= httpd_register_uri_handler(stream_httpd, &stream_frame_uri);
+        ret |= httpd_register_uri_handler(stream_httpd, &stream_result_uri);
+    }
+
+    if (ret != ESP_OK) {
+        log_e("Failed to start stream server, code '0x%x' ...", ret);
+        while (true) {
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
+        }
     }
 }
