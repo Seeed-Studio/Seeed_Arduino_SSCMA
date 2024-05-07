@@ -1037,7 +1037,9 @@
                     streamPreviewCtx.fillStyle = '#ffffff';
                     streamPreviewCtx.fillText(`${tag}: ${score}`, x - w / 2 + 5, y - h / 2 - 2);
 
-                    plotTrace(id, x, y, color);
+                    if (id != -1) {
+                        plotTrace(id, x, y, color);
+                    }
                 }
 
                 removeStaledTraces();
