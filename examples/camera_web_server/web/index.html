@@ -1546,25 +1546,22 @@
                         
                         switch (rotate) {
                         case 90:
-                            streamPreviewCtx.save();
                             streamPreviewCtx.translate(streamPreviewFrame.width / 2, streamPreviewFrame.height / 2);
                             streamPreviewCtx.rotate(Math.PI / 2);
                             streamPreviewCtx.drawImage(streamPreviewFrame, -streamPreviewFrame.height / 2, -streamPreviewFrame.width / 2, streamPreviewFrame.height, streamPreviewFrame.width);
-                            streamPreviewCtx.restore();
+                            streamPreviewCtx.setTransform(1, 0, 0, 1, 0, 0);
                             break;
                         case 180:
-                            streamPreviewCtx.save();
                             streamPreviewCtx.translate(streamPreviewFrame.width / 2, streamPreviewFrame.height / 2);
                             streamPreviewCtx.rotate(Math.PI);
                             streamPreviewCtx.drawImage(streamPreviewFrame, -streamPreviewFrame.width / 2, -streamPreviewFrame.height / 2, streamPreviewFrame.width, streamPreviewFrame.height);
-                            streamPreviewCtx.restore();
+                            streamPreviewCtx.setTransform(1, 0, 0, 1, 0, 0);
                             break;
                         case 270:
-                            streamPreviewCtx.save();
                             streamPreviewCtx.translate(streamPreviewFrame.width / 2, streamPreviewFrame.height / 2);
                             streamPreviewCtx.rotate(-Math.PI / 2);
                             streamPreviewCtx.drawImage(streamPreviewFrame, -streamPreviewFrame.height / 2, -streamPreviewFrame.width / 2, streamPreviewFrame.height, streamPreviewFrame.width);
-                            streamPreviewCtx.restore();
+                            streamPreviewCtx.setTransform(1, 0, 0, 1, 0, 0);
                             break;
                         default:
                             streamPreviewCtx.drawImage(streamPreviewFrame, 0, 0, streamPreviewFrame.width, streamPreviewFrame.height);
