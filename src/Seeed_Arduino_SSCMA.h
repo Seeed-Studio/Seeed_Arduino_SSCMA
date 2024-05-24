@@ -28,6 +28,10 @@
 #ifndef SEEED_ARDUINO_SSCMA_H
 #define SEEED_ARDUINO_SSCMA_H
 
+#if defined(__AVR__)
+#error "Insufficient memory: This code cannot run on any AVR platform due to limited memory."
+#endif
+
 #ifndef SSCMA_UART_BAUD
 #define SSCMA_UART_BAUD 921600
 #endif
@@ -111,7 +115,6 @@ const char CMD_AT_SENSORS[] = "SENSORS";
 const char CMD_AT_ACTION[] = "ACTION";
 const char CMD_AT_LED[] = "led";
 const char CMD_AT_SAVE_JPEG[] = "save_jpeg()";
-
 
 #define CMD_OK 0
 #define CMD_AGAIN 1
