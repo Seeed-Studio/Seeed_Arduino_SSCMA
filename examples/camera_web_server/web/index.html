@@ -549,6 +549,15 @@
                             <option value="2">VGA(640x480)</option>
                         </select>
                     </div>
+                    <div class="input-group" id="orientation-group">
+                        <label for="orientation">Orientation</label>
+                        <select id="orientation" class="default-action">
+                            <option value="0">Default</option>
+                            <option value="1">90°</option>
+                            <option value="2">180°</option>
+                            <option value="3">270°</option>
+                        </select>
+                    </div>
                     <div class="input-group" id="set-action-group">
                         <label for="set-action">Action</label>
                         <div class="text">
@@ -774,6 +783,7 @@
             const streamPreview = document.getElementById('preview');
 
             const resolutionSelect = document.getElementById('framesize');
+            const orientationSelect = document.getElementById('orientation');
 
             const setActionButton = document.getElementById('set-action');
             const saveButton = document.getElementById('save-still');
@@ -954,6 +964,7 @@
                 streamButton.innerHTML = 'Start Stream';
 
                 enable(resolutionSelect);
+                enable(orientationSelect);
                 enable(sampleSwitch);
                 enable(differedSwitch);
             };
@@ -1523,10 +1534,38 @@
                     const frameCtx = responseResult['data']['image']
                     frameImage.src = `data:image/jpeg;base64,${frameCtx}`;
 
+                    let roate = 0;
+                    if (responseResult['data'].hasOwnProperty('rotate')) {
+                        rotate = responseResult['data']['rotate'];
+                    }
+
                     streamPreviewFrame.onload = () => {
+
                         streamPreview.width = streamPreviewFrame.width;
                         streamPreview.height = streamPreviewFrame.height;
-                        streamPreviewCtx.drawImage(streamPreviewFrame, 0, 0, streamPreviewFrame.width, streamPreviewFrame.height);
+                        
+                        switch (rotate) {
+                        case 90:
+                            streamPreviewCtx.translate(streamPreviewFrame.width / 2, streamPreviewFrame.height / 2);
+                            streamPreviewCtx.rotate(Math.PI / 2);
+                            streamPreviewCtx.drawImage(streamPreviewFrame, -streamPreviewFrame.height / 2, -streamPreviewFrame.width / 2, streamPreviewFrame.height, streamPreviewFrame.width);
+                            streamPreviewCtx.setTransform(1, 0, 0, 1, 0, 0);
+                            break;
+                        case 180:
+                            streamPreviewCtx.translate(streamPreviewFrame.width / 2, streamPreviewFrame.height / 2);
+                            streamPreviewCtx.rotate(Math.PI);
+                            streamPreviewCtx.drawImage(streamPreviewFrame, -streamPreviewFrame.width / 2, -streamPreviewFrame.height / 2, streamPreviewFrame.width, streamPreviewFrame.height);
+                            streamPreviewCtx.setTransform(1, 0, 0, 1, 0, 0);
+                            break;
+                        case 270:
+                            streamPreviewCtx.translate(streamPreviewFrame.width / 2, streamPreviewFrame.height / 2);
+                            streamPreviewCtx.rotate(-Math.PI / 2);
+                            streamPreviewCtx.drawImage(streamPreviewFrame, -streamPreviewFrame.height / 2, -streamPreviewFrame.width / 2, streamPreviewFrame.height, streamPreviewFrame.width);
+                            streamPreviewCtx.setTransform(1, 0, 0, 1, 0, 0);
+                            break;
+                        default:
+                            streamPreviewCtx.drawImage(streamPreviewFrame, 0, 0, streamPreviewFrame.width, streamPreviewFrame.height);
+                        }
 
                         if (responseResult['data'].hasOwnProperty('boxes')) {
                             visualizeBoundingBoxes(responseResult['data']['boxes']);
@@ -1585,6 +1624,7 @@
 
             const startStream = async () => {
                 disable(resolutionSelect);
+                disable(orientationSelect);
                 disable(sampleSwitch);
                 disable(differedSwitch);
 
@@ -1622,6 +1662,7 @@
                     streamButton.innerHTML = "Start Stream";
 
                     enable(resolutionSelect);
+                    enable(orientationSelect);
                     enable(sampleSwitch);
                     enable(differedSwitch);
                 }
@@ -1630,7 +1671,9 @@
                 let success = await fetch((() => {
                     const sensorId = 1;
                     const optId = resolutionSelect.options[resolutionSelect.selectedIndex].value;
-                    const cmd = `SENSOR=${sensorId},1,${optId}`;
+                    const rotId = orientationSelect.options[orientationSelect.selectedIndex].value;
+                    const optCfg = (((1 << rotId) & 0b1110) << 11) | optId;
+                    const cmd = `SENSOR=${sensorId},1,${optCfg}`;
                     const encodedCmd = btoa(cmd);
                     return `${baseHost}/command?base64=${encodedCmd}`;
                 })()).then(async (response) => {
