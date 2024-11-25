@@ -565,7 +565,7 @@ int SSCMA::wait(int type, const char *cmd, uint32_t timeout)
 
                 ret = response["code"];
 
-                if (response["type"] == type && strcmp(response["name"], cmd) == 0)
+                if (response["type"] == type && strncmp(response["name"], cmd, sizeof(cmd)) == 0)
                 {
                     return ret;
                 }
