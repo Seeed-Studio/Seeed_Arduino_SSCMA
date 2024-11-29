@@ -54,7 +54,7 @@
     #define QRY_BUFFER_SIZE     (1024 * 16)
     #define CMD_BUFFER_SIZE     (1024 * 12)
 
-    #define BYTE_TRACKE_ENABLED 1
+    #define BYTE_TRACKER_ENABLED 1
 #else
     #warning "Server may not work properly due to resource constraints..."
     #define PTR_BUFFER_SIZE     3
@@ -65,7 +65,7 @@
     #define QRY_BUFFER_SIZE     (1024 * 4)
     #define CMD_BUFFER_SIZE     (1024 * 4)
 
-    #define BYTE_TRACKE_ENABLED 0
+    #define BYTE_TRACKER_ENABLED 0
 #endif
 
 #define CMD_TAG_FMT_STR "HTTPD%.8X@"
@@ -140,11 +140,9 @@ void startRemoteProxy(Proto through = PROTO_UART) {
         // a workaround is to modify uartBegin() in
         //     esp32/hardware/esp32/2.0.14/cores/esp32/esp32-hal-uart.c
         atSerial.setRxBufferSize(COM_BUFFER_SIZE);
-        atSerial.begin(921600);
 #else
     #define atSerial Serial1
         atSerial.setRxBufferSize(COM_BUFFER_SIZE);
-        atSerial.begin(921600);
 #endif
         AI.begin(&atSerial, D3);
         break;
@@ -558,7 +556,7 @@ static esp_err_t stream_result_handler(httpd_req_t* req) {
     esp_err_t     res     = ESP_OK;
     static size_t last_id = 0;
 
-#if BYTE_TRACKE_ENABLED
+#if BYTE_TRACKER_ENABLED
     JsonDocument                     response;
     BYTETracker                      tracker;
     std::vector<BYTETracker::Object> boxes_list;
@@ -614,7 +612,7 @@ static esp_err_t stream_result_handler(httpd_req_t* req) {
         }
 
         case MSG_TYPE_EVENT | CMD_TYPE_INVOKE: {
-#if !BYTE_TRACKE_ENABLED
+#if !BYTE_TRACKER_ENABLED
             res |= httpd_resp_send_chunk(req, (const char*)slot->data, slot->size);
             res |= httpd_resp_send_chunk(req, MSG_TERMI_STR, strlen(MSG_TERMI_STR));
             break;
@@ -623,7 +621,7 @@ static esp_err_t stream_result_handler(httpd_req_t* req) {
             DeserializationError err = deserializeJson(response, (const char*)slot->data, slot->size);
             if (err != DeserializationError::Ok) {
                 log_e("Failed to parse json...");
-                printf("%s\n", (const char*)slot->data);
+                log_e("%s\n", (const char*)slot->data);
                 break;
             }
 
