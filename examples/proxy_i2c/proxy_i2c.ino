@@ -12,7 +12,8 @@ void setup()
     Serial.begin(115200);
     while (!Serial)
         delay(1000);
-
+      
+    AI.begin(&Wire, D3);
     Serial.println("Proxy start");
 }
 
