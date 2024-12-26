@@ -43,31 +43,29 @@
 #endif
 
 #ifndef SSCMA_MAX_RX_SIZE
-#if defined(__SAMD21G18A__) // XIAO SAMD21
-#define SSCMA_MAX_RX_SIZE 8 * 1024
-// #elif defined(ARDUINO_SEEED_XIAO_NRF52840_SENSE) || defined(ARDUINO_SEEED_XIAO_NRF52840)
-// #define SSCMA_MAX_RX_SIZE 10 * 1024
-// #elif defined(ARDUINO_SEEED_XIAO_RP2040)
-// #elif defined(CONFIG_IDF_TARGET_ESP32S3) || defined(CONFIG_IDF_TARGET_ESP32C3)
+#ifdef ARDUINO_ARCH_ESP32
+#define SSCMA_MAX_RX_SIZE 32 * 1024
 #else
-#define SSCMA_MAX_RX_SIZE 2 * 32 * 1024
+#define SSCMA_MAX_RX_SIZE 4 * 1024
 #endif
 #endif
 
 #ifndef SSCMA_MAX_TX_SIZE
-#define SSCMA_MAX_TX_SIZE 2 * 1024
-#endif
-#ifndef SSCMA_MAX_PAYLOAD_SIZE
-#define SSCMA_MAX_PAYLOAD_SIZE 32 * 1024
+#define SSCMA_MAX_TX_SIZE 4 * 1024
 #endif
 
+#include <stdio.h>
 #include <stdint.h>
+#include <string.h>
+
 #include <vector>
+#include <functional>
+
 #include <Arduino.h>
 #include <Wire.h>
 #include <SPI.h>
+
 #include <ArduinoJson.h>
-#include <functional>
 
 #define I2C_ADDRESS (0x62)
 

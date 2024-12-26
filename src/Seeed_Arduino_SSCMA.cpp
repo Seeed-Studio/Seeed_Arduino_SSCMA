@@ -25,31 +25,38 @@
  * THE SOFTWARE.
  */
 
-
 #include "Seeed_Arduino_SSCMA.h"
 
-#ifdef ARDUINO_ARCH_RENESAS 
-char *strnstr(const char *haystack, const char *needle, size_t n) {
-    if (!needle || n == 0) {
+#ifdef ARDUINO_ARCH_RENESAS
+char *strnstr(const char *haystack, const char *needle, size_t n)
+{
+    if (!needle || n == 0)
+    {
         return NULL;
     }
-    
+
     size_t needle_len = 0;
-    while (needle[needle_len] != '\0') {
+    while (needle[needle_len] != '\0')
+    {
         needle_len++;
     }
-    
-    if (needle_len == 0) {
-        return (char *)haystack;  // Empty needle matches at the start
+
+    if (needle_len == 0)
+    {
+        return (char *)haystack; // Empty needle matches at the start
     }
 
-    for (size_t i = 0; i < n && haystack[i] != '\0'; i++) {
-        if (i + needle_len <= n && haystack[i] == needle[0]) {
+    for (size_t i = 0; i < n && haystack[i] != '\0'; i++)
+    {
+        if (i + needle_len <= n && haystack[i] == needle[0])
+        {
             size_t j = 1;
-            while (j < needle_len && haystack[i + j] == needle[j]) {
+            while (j < needle_len && haystack[i + j] == needle[j])
+            {
                 j++;
             }
-            if (j == needle_len) {
+            if (j == needle_len)
+            {
                 return (char *)&haystack[i];
             }
         }
@@ -552,8 +559,6 @@ int SSCMA::wait(int type, const char *cmd, uint32_t timeout)
                 continue;
             }
         }
-        // Serial.print("available : ");
-        // Serial.println(len);
 
         rx_end += read(rx_buf + rx_end, len);
         rx_buf[rx_end] = '\0';
@@ -669,6 +674,12 @@ void SSCMA::fetch(ResponseCallback RespCallback)
 int SSCMA::invoke(int times, bool filter, bool show)
 {
     char cmd[64] = {0};
+
+    if (show && rx_len < 16 * 1024)
+    {
+        return CMD_ENOTSUP;
+    }
+
     snprintf(cmd, sizeof(cmd), CMD_PREFIX "%s=%d,%d,%d" CMD_SUFFIX,
              CMD_AT_INVOKE, times, filter, !show);
     write(cmd, strlen(cmd));
