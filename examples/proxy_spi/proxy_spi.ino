@@ -5,14 +5,24 @@
 
 SSCMA AI;
 
+#define SSCMA_CONNECT_TO_XIAO_S3         1
+#define SSCMA_CONNECT_TO_GORVE_VISION_AI 0
+
 void setup()
 {
     // put your setup code here, to run once:
     Serial.begin(115200);
-    while (!Serial)
-        delay(1000);
+    while (!Serial) delay(1000);
+
+#if SSCMA_CONNECT_TO_XIAO_S3
+    SPI.begin(SCK, MISO, MOSI, -1);
+    AI.begin(&SPI, D3, -1, -1, 400000);
+#endif
+
+#if SSCMA_CONNECT_TO_GORVE_VISION_AI
     SPI.begin(SCK, MOSI, MISO, -1);
     AI.begin(&SPI, D1, D0);
+#endif
 
     Serial.println("Proxy start");
 }
