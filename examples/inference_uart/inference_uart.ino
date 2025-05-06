@@ -96,7 +96,7 @@ void loop()
             }
             Serial.println("]");
         }
-        if(!AI.last_image().isEmpty())
+        if(!AI.last_image().length() > 0)
         {
             Serial.print("Last image:");
             Serial.println(AI.last_image().c_str());
