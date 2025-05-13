@@ -10,17 +10,22 @@ HardwareSerial atSerial(0);
 #define atSerial Serial1
 #endif
 
+#define IMAGE_SHOW false
+
 SSCMA AI;
 
 void setup()
 {
     Serial.begin(9600);
     AI.begin(&atSerial);
+#if IMAGE_SHOW
+    AI.set_rx_buffer(32*1024);
+#endif
 }
 
 void loop()
 {
-    if (!AI.invoke(1,false,true))
+    if (!AI.invoke(1,IMAGE_SHOW))
     {
         Serial.println("invoke success");
         Serial.print("perf: prepocess=");

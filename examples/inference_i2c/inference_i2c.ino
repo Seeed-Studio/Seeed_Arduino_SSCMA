@@ -27,7 +27,7 @@ void setup()
 
 void loop()
 {
-    if (!AI.invoke(1, false, true))
+    if (!AI.invoke(1, false, false))
     {
         Serial.println("invoke success");
         Serial.print("perf: prepocess=");

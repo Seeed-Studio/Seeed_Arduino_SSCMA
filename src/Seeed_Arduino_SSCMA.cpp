@@ -445,7 +445,6 @@ void SSCMA::praser_event()
 {
     if (strstr(response["name"], CMD_AT_INVOKE))
     {
-
         if (response["data"].containsKey("perf"))
         {
             _perf.prepocess = response["data"]["perf"][0];
@@ -580,8 +579,11 @@ int SSCMA::wait(int type, const char *cmd, uint32_t timeout)
                 memmove(rx_buf, suffix + RESPONSE_SUFFIX_LEN, rx_end - (suffix - rx_buf) - RESPONSE_SUFFIX_LEN);
                 rx_end -= suffix - rx_buf + RESPONSE_SUFFIX_LEN;
                 payload[len - 1] = '\0';
-                // Serial.printf("\npayload :%s", payload);
+                //Serial.printf("\npayload :%s", payload);
                 // parse json response
+                // for(size_t i = 0; i < strlen(payload); i++){
+                //     Serial.printf("%c", payload[i]);
+                // }
                 response.clear();
                 DeserializationError error = deserializeJson(response, payload);
                 free(payload);
@@ -681,7 +683,7 @@ int SSCMA::invoke(int times, bool filter, bool show)
     }
 
     snprintf(cmd, sizeof(cmd), CMD_PREFIX "%s=%d,%d,%d" CMD_SUFFIX,
-             CMD_AT_INVOKE, times, filter, !show);
+             CMD_AT_INVOKE, times, !filter, filter); // AT+INVOKE=1,0,1\r\n
     write(cmd, strlen(cmd));
 
     if (wait(CMD_TYPE_RESPONSE, CMD_AT_INVOKE) == CMD_OK)
