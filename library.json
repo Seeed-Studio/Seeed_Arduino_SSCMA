@@ -1,7 +1,7 @@
 {
 	"name": "Seeed_Arduino_SSCMA",
 	"keywords": "arduino, seeedstudio, sscma, vision, ai",
-	"version": "1.0.2",
+	"version": "1.0.3",
 	"description": "Seeed_Arduino_SSCMA is a library for SSCMA, which is a vision sensor module with AI capability.",
 	"dependencies ": [{
 		"owner": "bblanchon",
